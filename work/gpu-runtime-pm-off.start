@@ -1,0 +1,11 @@
+#!/bin/sh
+# Keep the Adreno 320 out of runtime PM.
+#
+# The apq8064-mainline kernel halts the GPU VBIF before every runtime suspend
+# (drm/msm/a3xx: Drain VBIF before GPU suspend). On this unit the halt is never
+# acknowledged: every suspend attempt busy-waits for the full ADRENO_IDLE_TIMEOUT
+# (1 s, no sleeping), fails with -EBUSY and is retried 66 ms later. The GPU
+# never actually suspends and one core spends most of its time spinning in
+# a3xx_pm_suspend (17 % of all CPU time while scrolling, 75 C at idle).
+# Leaving the GPU powered costs less than that. Remove once the halt is fixed.
+echo on > /sys/bus/platform/devices/4300000.gpu/power/control

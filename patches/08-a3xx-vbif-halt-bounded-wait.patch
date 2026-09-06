@@ -1,0 +1,63 @@
+diff --git a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+index 0259e60b801..8b9ab496989 100644
+--- a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+@@ -6,6 +6,7 @@
+  * Copyright (c) 2014 The Linux Foundation. All rights reserved.
+  */
+ 
++#include <linux/delay.h>
+ #include "a3xx_gpu.h"
+ 
+ #define A3XX_INT0_MASK \
+@@ -26,6 +27,7 @@
+ extern bool hang_debug;
+ 
+ #define A3XX_VBIF_XIN_HALT_CTRL0_MASK	GENMASK(5, 0)
++#define A3XX_VBIF_HALT_TIMEOUT_MS	100
+ 
+ static void a3xx_dump(struct msm_gpu *gpu);
+ static bool a3xx_idle(struct msm_gpu *gpu);
+@@ -500,18 +502,36 @@ static u64 a3xx_gpu_busy(struct msm_gpu *gpu, unsigned long *out_sample_rate)
+ 
+ static int a3xx_vbif_halt(struct msm_gpu *gpu)
+ {
++	unsigned long timeout = jiffies + msecs_to_jiffies(A3XX_VBIF_HALT_TIMEOUT_MS);
+ 	u32 ack;
+-	int ret;
+ 
+ 	gpu_write(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL0,
+ 		  A3XX_VBIF_XIN_HALT_CTRL0_MASK);
+-	ret = spin_until(((ack = gpu_read(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL1)) &
+-			  A3XX_VBIF_XIN_HALT_CTRL0_MASK) ==
+-			 A3XX_VBIF_XIN_HALT_CTRL0_MASK);
++
++	/*
++	 * Bounded poll instead of spin_until(): that macro busy-waits for a
++	 * full second without sleeping. On the Galaxy S4 Active the halt is
++	 * never acknowledged, so with spin_until() every runtime suspend
++	 * burned a core for a second, failed with -EBUSY and was retried a
++	 * few milliseconds later, forever. Downstream KGSL
++	 * (adreno_vbif_clear_pending_transactions) waits at most 100 ms and
++	 * carries on regardless of the acknowledgement; do the same.
++	 */
++	do {
++		ack = gpu_read(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL1);
++		if ((ack & A3XX_VBIF_XIN_HALT_CTRL0_MASK) ==
++		    A3XX_VBIF_XIN_HALT_CTRL0_MASK)
++			break;
++		usleep_range(50, 100);
++	} while (time_before(jiffies, timeout));
++
+ 	gpu_write(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL0, 0);
+ 
+-	if (ret)
+-		return -EBUSY;
++	if ((ack & A3XX_VBIF_XIN_HALT_CTRL0_MASK) !=
++	    A3XX_VBIF_XIN_HALT_CTRL0_MASK)
++		dev_warn_once(gpu->dev->dev,
++			      "%s: VBIF halt not acknowledged (0x%08x), suspending anyway\n",
++			      gpu->name, ack);
+ 
+ 	return 0;
+ }

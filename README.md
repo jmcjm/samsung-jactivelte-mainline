@@ -48,6 +48,7 @@ WORKLOG.md  the full work log
 | `05-dsi-phy-timing-override-debug.patch` | debug only: override the D-PHY timings from the kernel command line |
 | `06-krait-uv-build.patch` | Kconfig/Makefile entries for the `krait-uv` module |
 | `07-mdp4-primary-plane-possible-crtcs.patch` | restricts mdp4's primary planes to their own CRTC; Weston 16 aborts on the default 0xff mask |
+| `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend; the fork's `spin_until()` burned a core for a second on every suspend attempt when the halt is not acknowledged |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
@@ -83,6 +84,7 @@ WORKLOG.md  the full work log
    git apply ../patches/04-hfpll-max-rate-1944.patch
    git apply ../patches/06-krait-uv-build.patch
    git apply ../patches/07-mdp4-primary-plane-possible-crtcs.patch
+   git apply ../patches/08-a3xx-vbif-halt-bounded-wait.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/
