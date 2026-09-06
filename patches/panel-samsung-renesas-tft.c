@@ -29,8 +29,14 @@
 #include <drm/drm_panel.h>
 #include <drm/drm_probe_helper.h>
 
-/* Brightness aboot programs while bringing the panel up (downstream: 0xb6). */
-#define RENESAS_TFT_DEFAULT_BRIGHTNESS	0x80
+/*
+ * DCS brightness range. Downstream maps the platform's 0-255 through a
+ * candela table whose top entry (255 cd) is 0xb6 and whose default (150 cd)
+ * is 0x51; aboot programs 0x80 for its splash. Letting userspace push 0xff
+ * drives the backlight 40 % harder than Android ever did and cooks the panel.
+ */
+#define RENESAS_TFT_DEFAULT_BRIGHTNESS	0x51
+#define RENESAS_TFT_MAX_BRIGHTNESS	0xb6
 
 /* Write control display: BCTRL | DD | BL, matching downstream 0x53 0x2c. */
 #define RENESAS_TFT_WRCTRLD		0x2c
@@ -53,7 +59,7 @@ MODULE_PARM_DESC(skip_power, "Do not touch panel rails and enable pins");
 
 static unsigned int brightness = RENESAS_TFT_DEFAULT_BRIGHTNESS;
 module_param(brightness, uint, 0644);
-MODULE_PARM_DESC(brightness, "Initial DCS brightness (0-255)");
+MODULE_PARM_DESC(brightness, "Initial DCS brightness (0-182, downstream maximum)");
 
 static bool enable_cmd = true;
 module_param(enable_cmd, bool, 0644);
@@ -409,7 +415,7 @@ static int renesas_tft_probe(struct mipi_dsi_device *dsi)
 	struct backlight_properties bl_props = {
 		.type = BACKLIGHT_RAW,
 		.brightness = RENESAS_TFT_DEFAULT_BRIGHTNESS,
-		.max_brightness = 255,
+		.max_brightness = RENESAS_TFT_MAX_BRIGHTNESS,
 	};
 	struct renesas_tft *ctx;
 	int ret;
