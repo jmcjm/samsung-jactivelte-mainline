@@ -1009,3 +1009,35 @@ What each of them turned out to be:
   once a second through `/dev/fb0` with fbcon unbound and the compositor
   stopped, `work/wash.py`) is the only software-side remedy; whether it
   fades on a cracked panel is up to the panel.
+- **Patch 08 revised: suspending without the halt hangs the GPU.** After
+  the wash the GPU had been runtime-suspended for 26 minutes; the moment
+  the greeter started rendering, `hangcheck detected gpu lockup` fired every
+  few seconds with phoc as the offending task (16 recoveries), which is
+  precisely the hang the fork's author fixed on jflte. Forcing
+  `power/control` to `on` stopped it instantly. So an unacknowledged VBIF
+  halt now means "do not suspend": the bounded poll stays, but on timeout
+  `a3xx_pm_suspend()` warns once, takes a permanent runtime PM reference
+  (`pm_runtime_get_noresume()`) and returns -EBUSY. No spinning, no hangs,
+  the GPU simply stays powered on this unit, which is what the workaround
+  script did by hand.
+- **greetd's initial session has a runfile.** greetd 0.10 starts
+  `initial_session` only when `/run/greetd.run` does not exist and creates
+  it on its first start after boot, so adding the section and restarting
+  the service does nothing until the next boot (or `rm /run/greetd.run`).
+  With that, the phone boots straight into the Phosh session.
+- **The DSI clock lane experiment.** Android forces a continuous HS clock
+  (`force_clk_lane_hs = 1`); this port uses a non-continuous clock because
+  the cold start failed with a continuous one. Every other DSI parameter
+  already matched Android (`VID_CFG0 = 0x9230`, sync event mode, burst,
+  no LP in HSA/HBP). The clock was switched live by setting bit 28 of
+  `LANE_CTRL` at `0x047000a8` through `/dev/mem` (`work/dsi-regs.py`) and
+  the panel kept running. It did not survive the next DPMS cycle: after the
+  idle blank the panel came back black with `prepare` logged, DPMS on and
+  the backlight lit, the documented cold-start failure with a continuous
+  clock. Clearing the bit and cycling the output through `wlr-randr`
+  brought the picture back. Ten minutes were too short to say anything
+  about retention. Patch 10 makes the experiment safe: `msm.dsi_force_hs_clk`
+  (sysfs-switchable, default off) sets the continuous-clock bit only in
+  `msm_dsi_host_enable()`, after the panel is initialised, and clears it in
+  `msm_dsi_host_disable()`, so the panel always powers on with LP-11 on the
+  clock lane and runs video with HS.

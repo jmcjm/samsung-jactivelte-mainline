@@ -158,7 +158,8 @@ Notes, each of them cost time:
   `a3xx_pm_suspend` most of the time (75 C at idle, throttling, a laggy
   shell). `work/gpu-runtime-pm-off.start` is the userspace workaround.
 - greetd starts the Phosh session directly through `initial_session`; the
-  phrog greeter only shows after a logout.
+  phrog greeter only shows after a logout. greetd honours that section only
+  when `/run/greetd.run` does not exist, i.e. on the first start after boot.
 - Phosh ignores a plain `Home` shortcut but accepts `XF86HomePage`. The
   device package remaps the physical Home key to `KEY_HOMEPAGE` with a udev
   rule; add `XF86HomePage` to `org.gnome.shell.keybindings
