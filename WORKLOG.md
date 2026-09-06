@@ -966,3 +966,29 @@ What each of them turned out to be:
   phoc never repaints (it only redraws damage), which shows up as greeter
   remnants over Phosh until the next full repaint, for example a DPMS cycle
   from the power key.
+- **"Burned-in" remnants and a battery that "drains on the charger".**
+  A `grim` capture (wlr-screencopy, the compositor's own buffer) is clean
+  while the glass shows reddish ghosts of the Settings header, so the
+  remnants are image retention of the cracked TFT after long static content
+  (hours of fbcon text and the greeter earlier today), not a rendering or
+  scanout bug. The "29 %" the shell showed while the gauge read 57 % is
+  upower averaging two "batteries": the max17048 gauge and
+  `max77693-charger`, which the mainline driver registers as
+  `POWER_SUPPLY_TYPE_BATTERY` with 0 %. upower has no ignore property, so
+  patch 09 makes the charger a `POWER_SUPPLY_TYPE_USB` supply, which is what
+  it is. The charger itself is fine: `Full` at the 3.90 V ceiling, 3.88 V on
+  the cell, recharge restart disabled in `CHG_CNFG_01` (0x31) as the
+  bootloader left it.
+- **Could the ghosting be the panel driver?** Android never showed it, so
+  the downstream `mipi_renesas_tft_video_full_hd_pt.c` was compared once
+  more, this time the jactive build: after power-on it sends `51 B6`,
+  `55 00`, `53 2C`, `35 01`, `11` (120 ms), `29` and nothing else; the F0/FA/FB
+  gamma block is compiled out for the Active, no manufacturer commands, no
+  VCOM or inversion settings, so the DDIC runs on its OTP defaults there as
+  well. VCO 906 MHz, 60 fps, burst mode, RGB888, 4 lanes, all as here; the
+  only differences are the TE-on command (`35 01`, irrelevant in video mode)
+  and downstream forcing a continuous HS clock, which changes nothing about
+  how the pixels are driven. What Android never did is run the SoC at 75 C
+  under the panel for an hour while showing the same static screen, which
+  is this unit's history today. Expect the ghosts to fade now that the SoC
+  idles at 46-50 C; if they do not, it is the panel.
