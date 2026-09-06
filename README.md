@@ -1,6 +1,6 @@
 # postmarketOS on the Samsung Galaxy S4 Active (GT-I9295, jactivelte)
 
-A mainline Linux 7.1 port of the Galaxy S4 Active, built on top of the existing
+A mainline Linux 7.2 port of the Galaxy S4 Active, built on top of the existing
 postmarketOS port for the regular Galaxy S4 (GT-I9505, `samsung-jflte`) and the
 [apq8064-mainline](https://github.com/apq8064-mainline/linux) kernel tree. The
 phone runs headless as a small home server, but the display works too.
@@ -74,7 +74,7 @@ WORKLOG.md  the full work log
 3. Kernel:
 
    ```sh
-   git clone --depth 1 --branch qcom-apq8064-v7.1 https://github.com/apq8064-mainline/linux.git
+   git clone --depth 1 --branch qcom-apq8064-v7.2 https://github.com/apq8064-mainline/linux.git
    cd linux
    git apply ../patches/01-register-panel-and-dtb.patch
    git apply ../patches/04-hfpll-max-rate-1944.patch
@@ -89,11 +89,11 @@ WORKLOG.md  the full work log
    `--exclude-from=.gitignore`, and the kernel's own `.gitignore` drops the
    tracked `kernel/time/timeconst.bc`, which breaks the build.
 
-   The `qcom-apq8064-v7.2` branch builds with exactly the same patch set
-   (checked 2026-09-06: the fork's apq8064 patches are unchanged, all four
-   patches apply, the DTB is byte-identical). It has not been flashed yet, and
-   pmaports still ships 7.1, so the package version comes from its APKBUILD
-   until that is bumped. See WORKLOG.md for the details.
+   The port started on `qcom-apq8064-v7.1` and moved to `qcom-apq8064-v7.2`
+   on 2026-09-06 with the patch set unchanged (the fork's apq8064 patches are
+   the same on both branches, the DTB is byte-identical). pmaports still ships
+   7.1, so the package built with `--src` is versioned `7.1_p<timestamp>` until
+   the APKBUILD is bumped; the kernel inside is 7.2.0. See WORKLOG.md.
 
    ```sh
    pmbootstrap -c <cfg> build --src ./linux linux-postmarketos-qcom-apq8064

@@ -742,8 +742,22 @@ apq8064-mainline published `qcom-apq8064-v7.2`. Checked what a move would cost:
   `krait-uv.ko`, vmlinuz `4e9a0f9ca4e4e69c987f8c198d7e6214`). The package
   name still says 7.1 because pmaports' APKBUILD has not been bumped: upstream
   pmaports is still on 7.1 (`085b3970`), no branch carries a 7.2 bump yet.
-- **Not flashed.** Moving to 7.2 buys nothing for this device today, and the
-  phone is working; the value is staying rebasable against the fork and
-  ready for the pmaports bump when it comes. When flashing: the whole
-  package must go on (`apk add --allow-untrusted`), because the module tree
-  changes to `7.2.0-…` and Wi-Fi (brcmfmac) is a module; the DTB can stay.
+- **Flashed the same evening.** The whole package went on with
+  `apk add --allow-untrusted`, because the module tree changes to `7.2.0-…`
+  and Wi-Fi (brcmfmac) is a module. The install triggered mkinitfs, which
+  regenerated the initramfs with the 7.2 modules, `initramfs-extra`,
+  `boot.img` and `extlinux.conf`. Two things learned there:
+  - `boot-deploy` composes the cmdline only from
+    `/usr/lib/kernel-cmdline.d/*.conf` (one parameter per line), so anything
+    added to `extlinux.conf` by hand is lost on the next regeneration.
+    `softlockup_panic=1` and the `zrodlo_rozruchu=extlinux` marker now live
+    in `60-local.conf` there.
+  - The old `7.1.0` module tree was not owned by the package (it had been
+    copied over by hand), so apk left it in place; harmless.
+  Cold boot on 7.2: up in about four minutes from power-on to SSH as before,
+  `uname -r` `7.2.0-postmarketos-qcom-apq8064`, Wi-Fi, `krait_uv`, charger,
+  LED, touchscreen unbound, 1944 MHz, panel probed and blanked by
+  `display-off.start`; a relight/blank cycle went through with no DSI
+  messages; dmesg is line-for-line the 7.1 one. Rollback copies:
+  `/boot/*.71final` and `/root/modules-7.1.0.tar.gz`. The project's `linux/`
+  checkout now sits on `qcom-apq8064-v7.2` with the patches reapplied.
