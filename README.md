@@ -50,6 +50,7 @@ WORKLOG.md  the full work log
 | `07-mdp4-primary-plane-possible-crtcs.patch` | restricts mdp4's primary planes to their own CRTC; Weston 16 aborts on the default 0xff mask |
 | `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend, and no suspend at all when it is never acknowledged (suspending anyway hangs the GPU on resume); the fork's `spin_until()` burned a core for a second on every attempt |
 | `09-max77693-charger-is-not-a-battery.patch` | registers the MAX77693 charger as a USB supply; as a "battery" at 0 % it made upower average the real gauge down to half |
+| `10-dsi-force-hs-clock-param.patch` | `msm.dsi_force_hs_clk=1` keeps the DSI clock lane in HS while video runs on a non-continuous-clock panel, the way downstream did; off by default, for the image-retention experiment |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
@@ -87,6 +88,7 @@ WORKLOG.md  the full work log
    git apply ../patches/07-mdp4-primary-plane-possible-crtcs.patch
    git apply ../patches/08-a3xx-vbif-halt-bounded-wait.patch
    git apply ../patches/09-max77693-charger-is-not-a-battery.patch
+   git apply ../patches/10-dsi-force-hs-clock-param.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/
