@@ -52,6 +52,25 @@
 			wakeup-source;
 		};
 
+		/*
+		 * The S4 Active has physical Menu and Back keys next to Home
+		 * instead of the capacitive touch keys of the regular S4
+		 * (downstream jactive_eur-gpio.h: PM8921 GPIO 4 and 5).
+		 */
+		key-menu {
+			label = "Menu";
+			gpios = <&pm8921_gpio 4 GPIO_ACTIVE_LOW>;
+			debounce-interval = <5>;
+			linux,code = <KEY_MENU>;
+		};
+
+		key-back {
+			label = "Back";
+			gpios = <&pm8921_gpio 5 GPIO_ACTIVE_LOW>;
+			debounce-interval = <5>;
+			linux,code = <KEY_BACK>;
+		};
+
 		key-volume-up {
 			label = "Volume Up";
 			gpios = <&pm8921_gpio 35 GPIO_ACTIVE_LOW>;
@@ -703,7 +722,7 @@
 	};
 
 	gpio_keys_default: gpio-keys-default-state {
-		pins = "gpio30", "gpio35", "gpio37";
+		pins = "gpio4", "gpio5", "gpio30", "gpio35", "gpio37";
 		function = PMIC_GPIO_FUNC_NORMAL;
 		input-enable;
 		bias-pull-up;

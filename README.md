@@ -19,7 +19,7 @@ not vendored, see below.
 | Display: JDI 1080x1920 TFT with a Renesas DSI controller | **works** (fbcon, DPMS on/off, cold start after cutting the rails) |
 | Backlight (DCS brightness through the panel controller) | works |
 | Touchscreen (Synaptics RMI4) | works |
-| Keys (power, home, volume) | works after fixing the inverted IRQ polarity the bootloader leaves behind |
+| Keys (power, home, menu, back, volume) | works after fixing the inverted IRQ polarity the bootloader leaves behind; menu/back are physical keys on the Active (PM8921 GPIO 4/5) |
 | Battery gauge, charger with a constant-voltage limit (3.90 V, about 60 %) | works |
 | cpufreq 384 to 1944 MHz on the real clock, L2 at 1188 MHz, thermal throttling | works |
 | Runtime undervolting (`krait-uv` module) | works |
