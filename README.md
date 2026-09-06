@@ -51,6 +51,7 @@ WORKLOG.md  the full work log
 | `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend, and no suspend at all when it is never acknowledged (suspending anyway hangs the GPU on resume); the fork's `spin_until()` burned a core for a second on every attempt |
 | `09-max77693-charger-is-not-a-battery.patch` | registers the MAX77693 charger as a USB supply; as a "battery" at 0 % it made upower average the real gauge down to half |
 | `10-dsi-force-hs-clock-param.patch` | `msm.dsi_force_hs_clk=1` keeps the DSI clock lane in HS while video runs on a non-continuous-clock panel, the way downstream did; off by default, for the image-retention experiment |
+| `11-a3xx-devfreq-busy-counter.patch` | a3xx reported core clock cycles as GPU busy time, so devfreq never left 450 MHz; read the PWR_1 busy counter instead |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
@@ -89,6 +90,7 @@ WORKLOG.md  the full work log
    git apply ../patches/08-a3xx-vbif-halt-bounded-wait.patch
    git apply ../patches/09-max77693-charger-is-not-a-battery.patch
    git apply ../patches/10-dsi-force-hs-clock-param.patch
+   git apply ../patches/11-a3xx-devfreq-busy-counter.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/
@@ -152,8 +154,9 @@ Notes, each of them cost time:
   `texture` scene and the second recovery fails (`gpu hw init failed`), so
   only a power cycle brings it back. The compositors themselves have not
   triggered it.
-- phrog (GTK4) draws shadows and flicker with GTK's GL renderer on this GPU;
-  `GSK_RENDERER=cairo` in `/etc/environment` fixes it.
+- Do not force `GSK_RENDERER=cairo`: GTK4 apps become visibly slow, and the
+  greeter artifacts that suggested it came from GPU hangs and panel
+  retention, not from GTK's GL renderer.
 - Without patch 08 the GPU never runtime-suspends and one core spins in
   `a3xx_pm_suspend` most of the time (75 C at idle, throttling, a laggy
   shell). `work/gpu-runtime-pm-off.start` is the userspace workaround.

@@ -1,0 +1,21 @@
+diff --git a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+index 79ba16d..3d965ac 100644
+--- a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+@@ -494,7 +494,15 @@ static u64 a3xx_gpu_busy(struct msm_gpu *gpu, unsigned long *out_sample_rate)
+ {
+ 	u64 busy_cycles;
+ 
+-	busy_cycles = gpu_read64(gpu, REG_A3XX_RBBM_PERFCTR_RBBM_1_LO);
++	/*
++	 * RBBM_PERFCTR_RBBM_1 counts core clock cycles whatever the GPU does
++	 * (measured: exactly the core clock rate at idle), so devfreq saw
++	 * 100 % load forever and never left the highest OPP. The fixed
++	 * function PWR_1 counter is the one that tracks GPU busy cycles
++	 * (0 at idle, a third of the clock under a simple EGL client), and
++	 * it is what the downstream KGSL driver used for busy statistics.
++	 */
++	busy_cycles = gpu_read64(gpu, REG_A3XX_RBBM_PERFCTR_PWR_1_LO);
+ 	*out_sample_rate = clk_get_rate(gpu->core_clk);
+ 
+ 	return busy_cycles;
