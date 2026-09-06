@@ -23,7 +23,7 @@ not vendored, see below.
 | Battery gauge, charger with a constant-voltage limit (3.90 V, about 60 %) | works |
 | cpufreq 384 to 1944 MHz on the real clock, L2 at 1188 MHz, thermal throttling | works |
 | Runtime undervolting (`krait-uv` module) | works |
-| LED, sensors | LED works, sensors untested |
+| LED, sensors | LED works (owned by feedbackd under Phosh); all sensors sit behind Samsung's SSP sensor hub, no driver |
 | GPU (Adreno 320) | **works** with `firmware-qcom-adreno-a300` and Mesa freedreno (GL ES 2.0 forced, see below); glmark2's texture scene hangs it and the hang is not recoverable |
 | Phosh (phoc, greetd + phrog greeter) | **works**, see "GUI" below |
 | Modem, audio, camera | not touched |
@@ -148,6 +148,14 @@ Notes, each of them cost time:
   `texture` scene and the second recovery fails (`gpu hw init failed`), so
   only a power cycle brings it back. The compositors themselves have not
   triggered it.
+- phrog (GTK4) draws shadows and flicker with GTK's GL renderer on this GPU;
+  `GSK_RENDERER=cairo` in `/etc/environment` fixes it.
+- Without patch 08 the GPU never runtime-suspends and one core spins in
+  `a3xx_pm_suspend` most of the time (75 C at idle, throttling, a laggy
+  shell). `work/gpu-runtime-pm-off.start` is the userspace workaround.
+- Bluetooth audio needs `postmarketos-base-ui-audio` and
+  `postmarketos-base-ui-audio-backend-pipewire`, which the Phosh UI package
+  does not pull in.
 
 ## Things that cost days, so you do not repeat them
 

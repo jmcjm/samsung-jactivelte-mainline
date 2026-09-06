@@ -858,3 +858,79 @@ Started the GUI round: GPU firmware, Weston as the reference test, then Phosh.
     gadget (and the fallback network on it) is gone. Whether this comes
     from the 7.2 move or from `postmarketos-usb-moded` is still open; the
     cable was moved to a charger before it could be checked.
+
+### First real use of Phosh — 2026-09-06, late evening
+
+Six complaints after logging in: shadows and flicker in the greeter, a
+laggy Phosh, no sound over Bluetooth, the battery draining on the charger,
+the Menu and Back keys dead, sensors untested. Plus two full system hangs.
+What each of them turned out to be:
+
+- **Greeter artifacts.** phrog is GTK4; on this freedreno the GTK GL
+  renderer draws smeared shadows. Phosh itself is GTK3 through cairo and was
+  clean, which pointed straight at the client. `GSK_RENDERER=cairo` in
+  `/etc/environment` (reaching sessions through the same `pam_env` hook as
+  the GLES override) puts GTK4 on software rendering.
+- **The lag was the kernel, not the touchscreen.** Touch reports arrive at
+  45-80 Hz while scrolling, so sampling is fine. `perf record -a` during
+  scrolling showed `a3xx_pm_suspend` eating 17 % of all CPU time, with the
+  GPU's `runtime_suspended_time` at zero after 20 minutes of uptime. The
+  fork's "drm/msm/a3xx: Drain VBIF before GPU suspend" halts the VBIF
+  before every runtime suspend and waits with `spin_until()`, which
+  busy-loops for `ADRENO_IDLE_TIMEOUT` (one second, no sleeping). On this
+  unit the halt is never acknowledged, so every suspend attempt burned a
+  core for a second, failed with -EBUSY and was retried 66 ms later, all
+  day long: the SoC sat at 73-75 C at idle, the cooling maps throttled the
+  cores to 1.5-1.7 GHz, and the UI stuttered. `echo on >
+  .../4300000.gpu/power/control` (now `/etc/local.d/gpu-runtime-pm-off.start`)
+  dropped idle system time from 4-30 % to 0-1 % and the temperature to
+  46-50 C; the user's verdict was "a million times better". Downstream
+  KGSL only halts the VBIF on reset, with a 100 ms limit, and proceeds
+  whether or not it is acknowledged. Patch 08 does the same in
+  `a3xx_vbif_halt()`: bounded poll with `usleep_range()`, one warning on
+  timeout, then the normal suspend. Built, not yet verified on the phone.
+- **The status LED cost 5 % of a core.** With the display on, feedbackd
+  from the Phosh session owns the RGB LED (it resets the trigger to
+  `pattern` and the brightness to 0), so the headless breathing script
+  fought with it, and the software `pattern` trigger pushed ~40 brightness
+  updates per second over the bit-banged `i2c-gpio` bus behind the AN30259A,
+  visible in perf as `__timer_udelay` from `i2c_outb`. `led-status.start`
+  is retired to `/root/headless-scripts/`; the LED is the notification LED now.
+- **Two hard hangs**, one while using Phosh and one right after a greeter
+  restart, both with the WiFi association still alive but no traffic. The
+  second one ended in a spontaneous reset with an empty pstore, which
+  points at a PMIC or watchdog reset rather than a panic. The undervolt
+  (-50/-75 mV) was validated with a CPU-only stress ladder on the headless
+  setup; the GUI adds GPU and panel load on the same rails. `krait-uv.start`
+  is disabled until the GUI has run a day without a hang. No hang since,
+  but the GPU spin above also disappeared in the same window, so this is
+  not settled.
+- **Bluetooth audio.** `postmarketos-ui-phosh` does not pull the audio
+  backend: no `pipewire-pulse`, no `pipewire-spa-bluez`, hence only the dummy
+  output. `apk add postmarketos-base-ui-audio
+  postmarketos-base-ui-audio-backend-pipewire`; takes effect on the next login
+  because PipeWire starts from the session's autostart.
+- **Charging.** The input limit is 1.9 A (`CHGIN_ILIM = 0x5f`), the MUIC
+  reports DCP, so the 500 mA seen on the meter is not a limit but the
+  phone's draw while the charger sits in top-off at the deliberate 3.90 V
+  constant-voltage ceiling. Under GUI load the battery drifts below that
+  and the charger tops it up again; the level hovers around 50-55 % by
+  design. If the phone is going to be used with the screen on, raising
+  `maxim,constant-microvolt` (4.10 V is about 80 %) gives headroom; that
+  is a trade against cell ageing and stays the owner's call.
+- **Menu and Back keys.** The S4 Active has physical keys where the S4
+  has capacitive ones; downstream `jactive_eur-gpio.h` puts them on PM8921
+  GPIO 4 and 5. Added to `gpio-keys` in the DTS with the same pinconf
+  group as Home and the volume keys (the `qcom,no-inversion` quirk
+  included). Built and installed, needs a power cycle.
+- **Sensors.** No IIO device exists because every sensor on this board sits
+  behind Samsung's SSP sensor hub (an STM32 on SPI, `CONFIG_SENSORS_SSP`
+  downstream). Mainline's `ssp_sensors` driver targets the Gear 2 hub and
+  its protocol; getting this hub to talk is a separate project.
+- **Side finding:** brcmfmac polls the BCM4335 over SDIO with CMD52 about
+  25 times a second because the qcom mmci variant has no SDIO IRQ support
+  and no `host-wake` interrupt is wired up; each poll bounces the SDCC3
+  host through runtime PM. Downstream uses TLMM GPIO 61 or 65 for host-wake
+  depending on the board revision; neither pin pulsed under traffic in a
+  quick `gpiomon` test, which proves nothing until the driver enables the
+  OOB signal. Left alone, it is a few per cent of a core.
