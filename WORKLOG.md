@@ -934,3 +934,23 @@ What each of them turned out to be:
   depending on the board revision; neither pin pulsed under traffic in a
   quick `gpiomon` test, which proves nothing until the driver enables the
   OOB signal. Left alone, it is a few per cent of a core.
+- **Home key and the dead bottom of the touchscreen.** Phosh does nothing
+  with `KEY_HOME`; it reads `org.gnome.shell.keybindings`, but a plain `Home`
+  added to `toggle-application-view` was ignored even when injected with
+  `wtype`, while `XF86HomePage` was honoured (Phosh takes unmodified
+  shortcuts only for XF86 keysyms, the way the volume and power keys work).
+  So the physical key now reports `KEY_HOMEPAGE`, as the downstream Samsung
+  kernel did: gpio-keys has no scancodes, its "scancode" is the index in the
+  keymap and Home is index 0, so a udev rule with `KEYBOARD_KEY_0=homepage`
+  (shipped by the device package) remaps it, and the user's dconf has
+  `['<Super>a', 'XF86HomePage']`. Writing that setting needs the session
+  bus address from phosh's environment; `dbus-run-session` puts the socket
+  under `/tmp`, not `/run/user/<uid>/bus`, and `gsettings set` fails
+  silently with the wrong one. Raw `evtest` capture while dragging to the
+  bottom edge never returned Y above 1810 of the digitizer's native 0..1919
+  (F12 sensor tuning: 1079x1919, no inactive border, 62x111 mm), so the last
+  ~110 px are dead hardware on this cracked panel, right where the Phosh
+  home bar lives. A libinput calibration matrix stretching the live area
+  over the screen (Y x 1.06) made the bar reachable but put every touch
+  visibly below the finger near the bottom; rejected. The Home key is the
+  way to the overview instead.

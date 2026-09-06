@@ -17,6 +17,7 @@ depends="
 "
 makedepends="devicepkg-dev"
 source="
+	90-jactivelte-keys.rules
 	adreno-a3xx-quirks.sh
 	deviceinfo
 	kernel-cmdline.conf
@@ -33,9 +34,13 @@ package() {
 
 	install -Dm644 "$srcdir"/adreno-a3xx-quirks.sh \
 		"$pkgdir"/etc/profile.d/adreno-a3xx-quirks.sh
+
+	install -Dm644 "$srcdir"/90-jactivelte-keys.rules \
+		"$pkgdir"/usr/lib/udev/rules.d/90-jactivelte-keys.rules
 }
 
 sha512sums="
+332e3050a3c85abc7d4ba90f26ac6276d7fa4526f992a81cbdfa2b772d2259db746344c95ec5f8f1497532696ec9afffa9efe16c6641ee5c8b9631b9d8032333  90-jactivelte-keys.rules
 f5e2a9cd2a0468ef7492096245319954e7d4de2db363f42a9b69d7e738b8808a0162fc74aa3d7bd44ebc30039d023e160e7be1bd571aeb0a7a2a3984090eaa94  adreno-a3xx-quirks.sh
 7589ccc0dac03bd7258509bbd03cced92f7172c71502ce7f7d7c05bcc0586fd7736d24be5db74fca83666597d445b2ba95c437a3b967350a540952c2f68aa778  deviceinfo
 dce529d931031708299d534cb59e5d9862fb6d7bdb42f687242c6c88f5df96f184c39b99a27d734bea30471710dc63e80a356a6d9de78e4998e9da738158c252  kernel-cmdline.conf

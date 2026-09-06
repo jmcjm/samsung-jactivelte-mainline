@@ -153,6 +153,10 @@ Notes, each of them cost time:
 - Without patch 08 the GPU never runtime-suspends and one core spins in
   `a3xx_pm_suspend` most of the time (75 C at idle, throttling, a laggy
   shell). `work/gpu-runtime-pm-off.start` is the userspace workaround.
+- Phosh ignores a plain `Home` shortcut but accepts `XF86HomePage`. The
+  device package remaps the physical Home key to `KEY_HOMEPAGE` with a udev
+  rule; add `XF86HomePage` to `org.gnome.shell.keybindings
+  toggle-application-view` in the user's session to open the app view with it.
 - Bluetooth audio needs `postmarketos-base-ui-audio` and
   `postmarketos-base-ui-audio-backend-pipewire`, which the Phosh UI package
   does not pull in.
