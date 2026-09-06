@@ -1099,3 +1099,14 @@ What each of them turned out to be:
   KEY_HOMEPAGE/KEY_MENU/KEY_BACK without any udev rule, no renderer override
   in the session, and devfreq finally moving: 122 transitions in the first
   minute, 48 s at 27 MHz against 18 s at 450 MHz.
+- **Appearance panel lag, measured.** With devfreq working the GPU sat at
+  27 MHz for 84 % of the samples while scrolling the Appearance panel: it
+  simply is not needed there. The time goes to gnome-control-center and its
+  thread pools decoding the wallpaper previews (about 40 % user), plus 56 %
+  system time in page faults, `kmap` and `memcpy` moving the bitmaps, all
+  at 1.78 GHz because the SoC sits at 76 C with every cooling device at
+  state 2. msm's `idle_clamp` (debugfs `dri/0/devfreq/idle_clamp`, the
+  fast-restore logic used on a6xx) made no difference here and stays off.
+  Raising the 75 C passive trip would buy CPU time at the panel's expense;
+  the owner chose to leave it. Screen blanking is back at five minutes,
+  the lock screen needs no passcode.
