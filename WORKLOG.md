@@ -992,3 +992,20 @@ What each of them turned out to be:
   under the panel for an hour while showing the same static screen, which
   is this unit's history today. Expect the ghosts to fade now that the SoC
   idles at 46-50 C; if they do not, it is the panel.
+- **Power cycle onto patches 08 and 09.** SSH after 65 s from power-on
+  instead of the usual four minutes. With the GPU back on `auto` runtime PM
+  it suspends within seconds (`runtime_suspended_time` climbing, dmesg
+  shows one `VBIF halt not acknowledged (0x00000000), suspending anyway`
+  and nothing else), the greeter keeps rendering, and the shell idles at
+  97 % with the SoC at 50-53 C. `gpu-runtime-pm-off.start` removed from the
+  phone; `work/` keeps a copy for kernels without the patch. gpio-keys now
+  lists KEY_MENU, KEY_BACK and KEY_HOMEPAGE, upower shows a single battery
+  at the gauge's value, and phrog runs with `GSK_RENDERER=cairo`.
+- **No more greeter at boot.** greetd's `initial_session` now starts
+  `phosh-session` for the user directly; phrog only appears after a logout.
+- **LCD retention was visible on the boot splash after a cold start**, so
+  it is charge in the liquid crystal, not anything in the display path. A
+  25 minute "wash" (full-screen white, black, red, green, blue, grey cycled
+  once a second through `/dev/fb0` with fbcon unbound and the compositor
+  stopped, `work/wash.py`) is the only software-side remedy; whether it
+  fades on a cracked panel is up to the panel.

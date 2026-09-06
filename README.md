@@ -155,6 +155,8 @@ Notes, each of them cost time:
 - Without patch 08 the GPU never runtime-suspends and one core spins in
   `a3xx_pm_suspend` most of the time (75 C at idle, throttling, a laggy
   shell). `work/gpu-runtime-pm-off.start` is the userspace workaround.
+- greetd starts the Phosh session directly through `initial_session`; the
+  phrog greeter only shows after a logout.
 - Phosh ignores a plain `Home` shortcut but accepts `XF86HomePage`. The
   device package remaps the physical Home key to `KEY_HOMEPAGE` with a udev
   rule; add `XF86HomePage` to `org.gnome.shell.keybindings
