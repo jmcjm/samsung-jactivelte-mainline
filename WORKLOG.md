@@ -1041,3 +1041,35 @@ What each of them turned out to be:
   `msm_dsi_host_enable()`, after the panel is initialised, and clears it in
   `msm_dsi_host_disable()`, so the panel always powers on with LP-11 on the
   clock lane and runs video with HS.
+- **Backlight was allowed 40 % above Android's maximum.** The downstream
+  driver maps the platform's 0-255 through a candela table whose top entry
+  (255 cd) writes DCS brightness 0xB6 = 182 and whose default (150 cd) is
+  0x51 = 81; the panel driver here exposed 0-255 straight to DCS and the
+  Phosh slider at 100 % sent 0xFF, driving the backlight LEDs 40 % harder
+  than Android ever did, right against the LCD. The user spotted that the
+  ghosting builds up at full brightness. `max_brightness` is now 182 and the
+  default 81. The GPU busy counter idea (patch 11) turned out to be
+  upstream's own code already (`RBBM_GPU_BUSY_MASKED = 0xffffffff` in
+  `a3xx_hw_init()`), so devfreq's blindness has another cause; dropped.
+- **Keys, final form.** `KEY_MENU` maps to `XF86MenuKB` and `KEY_BACK` to
+  `XF86Back` in xkb, both XF86 keysyms Phosh accepts unmodified, so only Home
+  needed a change: the device tree now reports `KEY_HOMEPAGE` and the udev
+  remap is gone. Bindings in the user's dconf: Home opens the app view
+  (`toggle-application-view`), Menu the notification tray
+  (`toggle-message-tray`), Back is left to the applications: there is no
+  system-wide "back" in Phosh, and libadwaita navigation views treat
+  `XF86Back` as "go back", so binding it to closing the window (the first
+  attempt) was worse than nothing. An injected `XF86MenuKB`
+  through `wtype` opened and closed the tray. Note for anyone remapping
+  gpio-keys with udev: `KEYBOARD_KEY_<index>` works for index 0 but silently
+  did nothing for index 1, while `EVIOCSKEYCODE_V2` by index works.
+- **Sound.** No ALSA card exists: the device tree carries no LPASS or codec
+  node and mainline has no driver for the WCD9310 (Tabla) codec, so the
+  speaker, earpiece and wired headset stay silent. Bluetooth A2DP is the
+  only output; the sink appears when the headset connects.
+- **Under load the phone throttles, not spins.** `perf` while scrolling the
+  Settings app: 4 % system time, 26 % user, all in gnome-control-center
+  (GTK4 rendered in software because of `GSK_RENDERER=cairo`) and phoc;
+  the SoC reaches 70-76 C and the cooling maps drop the cores to 1.78 GHz.
+  That is the price of software rendering plus a GPU that can no longer
+  runtime-suspend on this unit.

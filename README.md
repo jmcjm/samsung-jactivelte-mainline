@@ -26,7 +26,7 @@ not vendored, see below.
 | LED, sensors | LED works (owned by feedbackd under Phosh); all sensors sit behind Samsung's SSP sensor hub, no driver |
 | GPU (Adreno 320) | **works** with `firmware-qcom-adreno-a300` and Mesa freedreno (GL ES 2.0 forced, see below); glmark2's texture scene hangs it and the hang is not recoverable |
 | Phosh (phoc, greetd + phrog greeter) | **works**, see "GUI" below |
-| Modem, audio, camera | not touched |
+| Modem, audio, camera | not touched; SoC audio needs a WCD9310 codec driver that mainline lacks, Bluetooth A2DP works |
 
 ## Repository layout
 
@@ -160,10 +160,17 @@ Notes, each of them cost time:
 - greetd starts the Phosh session directly through `initial_session`; the
   phrog greeter only shows after a logout. greetd honours that section only
   when `/run/greetd.run` does not exist, i.e. on the first start after boot.
-- Phosh ignores a plain `Home` shortcut but accepts `XF86HomePage`. The
-  device package remaps the physical Home key to `KEY_HOMEPAGE` with a udev
-  rule; add `XF86HomePage` to `org.gnome.shell.keybindings
-  toggle-application-view` in the user's session to open the app view with it.
+- Phosh accepts only XF86 keysyms as unmodified shortcuts. The device tree
+  reports Home as `KEY_HOMEPAGE`; Menu and Back are `XF86MenuKB` and
+  `XF86Back` by themselves. Bind them in the user's session, for example
+  `XF86HomePage` to `toggle-application-view`, `XF86MenuKB` to
+  `toggle-message-tray` (both `org.gnome.shell.keybindings`); leave
+  `XF86Back` unbound so applications get it as "go back".
+- The backlight range is capped at DCS 0xB6 like downstream; 0xFF drives the
+  LEDs 40 % harder than Android and the panel shows image retention within
+  minutes at that level.
+- There is no SoC audio (no LPASS node, no WCD9310 driver); Bluetooth A2DP is
+  the only sound output.
 - Bluetooth audio needs `postmarketos-base-ui-audio` and
   `postmarketos-base-ui-audio-backend-pipewire`, which the Phosh UI package
   does not pull in.
