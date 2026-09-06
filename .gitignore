@@ -14,3 +14,5 @@ work/working.dts
 *.rej
 # downstream reference copies and drafts, not needed to rebuild
 cpufreq/
+# isolated worktrees of the kernel tree
+.worktrees/
