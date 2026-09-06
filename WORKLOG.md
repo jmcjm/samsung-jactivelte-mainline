@@ -1073,3 +1073,23 @@ What each of them turned out to be:
   the SoC reaches 70-76 C and the cooling maps drop the cores to 1.78 GHz.
   That is the price of software rendering plus a GPU that can no longer
   runtime-suspend on this unit.
+- **The GPU never scaled down, and now we know why.** Reading the
+  Adreno's performance counters live through `/dev/mem` (`work/gpuctr.py`):
+  `RBBM_PERFCTR_RBBM_1`, which mainline's `a3xx_gpu_busy()` reports as busy
+  cycles, advances by exactly 450 200 000 per second with the GPU idle, so
+  it counts core clock cycles (both RBBM counters have select 0, "always
+  on"). `RBBM_PERFCTR_PWR_1` stays at zero at idle and reaches 29 % of the
+  clock under `weston-simple-egl`, so it is the fixed-function busy counter,
+  the one downstream KGSL used for its busy statistics. devfreq therefore
+  saw 100 % load since the first boot and parked the GPU at 450 MHz, which
+  with runtime PM out of the picture means the GPU burns at full clock all
+  day. Patch 11 reads PWR_1 instead; with the two-OPP table the GPU should
+  sit at 27 MHz whenever the screen is static.
+- **`GSK_RENDERER=cairo` was a wrong call, reverted.** The "million times
+  better" state had a corrupted `/etc/environment`, so GTK4 apps were still
+  rendering through GL and the Settings app was smooth. Once the file was
+  rewritten every new session rendered GTK4 in software, and the user
+  immediately felt the Settings app lag. The greeter artifacts that
+  motivated the override turned out to be GPU hang loops and panel
+  retention, not GTK's GL renderer. The variable is gone; only the GLES
+  2.0 override stays.
