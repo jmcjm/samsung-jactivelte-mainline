@@ -20,7 +20,7 @@ not vendored, see below.
 | Backlight (DCS brightness through the panel controller) | works |
 | Touchscreen (Synaptics RMI4) | works |
 | Keys (power, home, menu, back, volume) | works after fixing the inverted IRQ polarity the bootloader leaves behind; menu/back are physical keys on the Active (PM8921 GPIO 4/5) |
-| Battery gauge, charger with a constant-voltage limit (3.90 V, about 60 %) | works |
+| Battery gauge, charger with a constant-voltage limit (3.90 V, about 60 %) | works; patch 09 keeps upower from counting the charger as a second battery |
 | cpufreq 384 to 1944 MHz on the real clock, L2 at 1188 MHz, thermal throttling | works |
 | Runtime undervolting (`krait-uv` module) | works |
 | LED, sensors | LED works (owned by feedbackd under Phosh); all sensors sit behind Samsung's SSP sensor hub, no driver |
@@ -49,6 +49,7 @@ WORKLOG.md  the full work log
 | `06-krait-uv-build.patch` | Kconfig/Makefile entries for the `krait-uv` module |
 | `07-mdp4-primary-plane-possible-crtcs.patch` | restricts mdp4's primary planes to their own CRTC; Weston 16 aborts on the default 0xff mask |
 | `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend; the fork's `spin_until()` burned a core for a second on every suspend attempt when the halt is not acknowledged |
+| `09-max77693-charger-is-not-a-battery.patch` | registers the MAX77693 charger as a USB supply; as a "battery" at 0 % it made upower average the real gauge down to half |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
@@ -85,6 +86,7 @@ WORKLOG.md  the full work log
    git apply ../patches/06-krait-uv-build.patch
    git apply ../patches/07-mdp4-primary-plane-possible-crtcs.patch
    git apply ../patches/08-a3xx-vbif-halt-bounded-wait.patch
+   git apply ../patches/09-max77693-charger-is-not-a-battery.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/
