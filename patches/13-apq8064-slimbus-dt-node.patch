@@ -1,0 +1,23 @@
+diff --git a/arch/arm/boot/dts/qcom/qcom-apq8064.dtsi b/arch/arm/boot/dts/qcom/qcom-apq8064.dtsi
+index d7fe281455c..8e4c614dba2 100644
+--- a/arch/arm/boot/dts/qcom/qcom-apq8064.dtsi
++++ b/arch/arm/boot/dts/qcom/qcom-apq8064.dtsi
+@@ -756,6 +756,18 @@ lcc: clock-controller@28000000 {
+ 				      "pcm_codec_clk";
+ 		};
+ 
++		slim: slim@28080000 {
++			compatible = "qcom,apq8064-slim", "qcom,slim";
++			reg = <0x28080000 0x2000>, <0x80207c 0x4>;
++			reg-names = "ctrl", "slew";
++			interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&lcc SLIMBUS_SRC>, <&lcc AUDIO_SLIMBUS_CLK>;
++			clock-names = "iface", "core";
++			#address-cells = <2>;
++			#size-cells = <0>;
++			status = "disabled";
++		};
++
+ 		mmcc: clock-controller@4000000 {
+ 			compatible = "qcom,mmcc-apq8064";
+ 			reg = <0x4000000 0x1000>;

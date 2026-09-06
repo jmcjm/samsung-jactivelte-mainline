@@ -731,6 +731,20 @@
 		output-low;
 	};
 
+	codec_reset_default_state: codec-reset-default-state {
+		pins = "gpio34";
+		function = PMIC_GPIO_FUNC_NORMAL;
+		power-source = <PM8921_GPIO_S4>;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_MED>;
+		drive-push-pull;
+		bias-disable;
+		/*
+		 * RESET_N of the WCD9310. The bootloader leaves the line
+		 * driven low, so applying this state releases the codec.
+		 */
+		output-high;
+	};
+
 	gpio_keys_default: gpio-keys-default-state {
 		pins = "gpio4", "gpio5", "gpio30", "gpio35", "gpio37";
 		function = PMIC_GPIO_FUNC_NORMAL;
@@ -794,6 +808,13 @@
 		};
 	};
 
+	slimbus_default_state: slimbus-default-state {
+		pins = "gpio40", "gpio41";
+		function = "slimbus";
+		drive-strength = <8>;
+		bias-bus-hold;
+	};
+
 	muic_int_default_state: muic-int-default-state {
 		pins = "gpio55";
 		function = "gpio";
@@ -808,6 +829,26 @@
 		drive-strength = <2>;
 		input-enable;
 		bias-disable;
+	};
+};
+
+&slim {
+	pinctrl-0 = <&slimbus_default_state &codec_reset_default_state>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	/*
+	 * WCD9310 (Tabla 2.x). The downstream board file enumerates it as
+	 * {0, 1, 0x60, 0, 0x17, 2}: manufacturer 0x217, product code 0x60,
+	 * device index 1, instance 0.
+	 *
+	 * Supplies are permanently on: pm8921_l25 (1.25 V) feeds VDDD_CDC_D
+	 * and CDC_VDDA_A_1P2V, pm8921_s4 (1.8 V) feeds VDDIO_CDC, CDC_VDD_CP
+	 * and CDC_VDDA_RX/TX.
+	 */
+	audio-codec@1,0 {
+		compatible = "slim217,60";
+		reg = <1 0>;
 	};
 };
 
