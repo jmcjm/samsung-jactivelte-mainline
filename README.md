@@ -89,6 +89,12 @@ WORKLOG.md  the full work log
    `--exclude-from=.gitignore`, and the kernel's own `.gitignore` drops the
    tracked `kernel/time/timeconst.bc`, which breaks the build.
 
+   The `qcom-apq8064-v7.2` branch builds with exactly the same patch set
+   (checked 2026-09-06: the fork's apq8064 patches are unchanged, all four
+   patches apply, the DTB is byte-identical). It has not been flashed yet, and
+   pmaports still ships 7.1, so the package version comes from its APKBUILD
+   until that is bumped. See WORKLOG.md for the details.
+
    ```sh
    pmbootstrap -c <cfg> build --src ./linux linux-postmarketos-qcom-apq8064
    pmbootstrap -c <cfg> build device-samsung-jactivelte

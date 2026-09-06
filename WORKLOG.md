@@ -708,3 +708,42 @@ initramfs, or `4300000.gpu` gets rebound after boot. Available for a GUI:
 On the Nexus 7 2013 (the same SoC) pmOS runs Phosh this way. Decision: keep this in
 a personal GitHub repository, with no pmOS upstreaming for now; GPU and GUI in the
 next round.
+
+### The qcom-apq8064-v7.2 branch — 2026-09-06, evening
+
+apq8064-mainline published `qcom-apq8064-v7.2`. Checked what a move would cost:
+
+- **Fork patch set is the same.** The apq8064-specific commits on top of Linux
+  7.2 are the ones from 7.1 (jflte DTS, `qcom,no-inversion`, mdp4 clock
+  fixes, a3xx VBIF drain, MAX77693, ICE4) plus new msm8960-only work (Riva,
+  SMEM, SPS, huashan Wi-Fi). Only "pinctrl: qcom: Register functions before
+  enabling pinctrl" is gone, because it landed upstream in 7.2. Every
+  apq8064 DTS file is byte-identical between the two branches, so the DTB
+  built from our DTS has the same md5 as the one on the phone.
+- **Nothing in the 7.1→7.2 base delta touches our path.** DSI/mdp4 changes are
+  an internal DRM rename (`drm_atomic_state` → `drm_atomic_commit` in the
+  helper signatures) and the removal of `drm_connector_attach_encoder`
+  calls; `drm_panel_init()` was removed, which does not matter because the
+  panel driver already uses `devm_drm_panel_alloc()`. `pinctrl-ssbi-gpio`
+  only had a typo renamed. tsens gained read retries and IRQ wake plumbing
+  in the common core, the 8960 backend is untouched. msm dropped the a3xx
+  hardcoded perf counters in favour of a generic perfcntr layer.
+- **All four patches apply cleanly** (`git apply --check` on 01, 04, 05 and 06).
+- **Config:** `make olddefconfig` on 7.2 with our config adds only new
+  "is not set" symbols. One real finding, valid for 7.1 too:
+  `CONFIG_BOOTPARAM_SOFTLOCKUP_PANIC` is an `int`, so the `=y` in our config
+  was rejected by syncconfig and reset to 0; the phone's `/proc/config.gz`
+  confirms it. Panic-on-softlockup has only ever come from
+  `softlockup_panic=1` on the cmdline. Fixed to `=1` in the config.
+- **Build:** a worktree of the 7.2 tip with the patches applied built through
+  pmbootstrap without a single warning in the log
+  (`linux-postmarketos-qcom-apq8064-7.1_p20260906170835-r2`, kernel
+  `7.2.0-postmarketos-qcom-apq8064`, 561 modules incl. brcmfmac and
+  `krait-uv.ko`, vmlinuz `4e9a0f9ca4e4e69c987f8c198d7e6214`). The package
+  name still says 7.1 because pmaports' APKBUILD has not been bumped: upstream
+  pmaports is still on 7.1 (`085b3970`), no branch carries a 7.2 bump yet.
+- **Not flashed.** Moving to 7.2 buys nothing for this device today, and the
+  phone is working; the value is staying rebasable against the fork and
+  ready for the pmaports bump when it comes. When flashing: the whole
+  package must go on (`apk add --allow-untrusted`), because the module tree
+  changes to `7.2.0-…` and Wi-Fi (brcmfmac) is a module; the DTB can stay.
