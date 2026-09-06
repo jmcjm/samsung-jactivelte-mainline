@@ -1,6 +1,0 @@
-# The physical Home key is KEY_HOME in the device tree. Phosh only honours
-# XF86 keysyms as unmodified shortcuts, so report it as KEY_HOMEPAGE
-# (XF86HomePage), which is what the downstream Samsung kernel emitted.
-# gpio-keys has no scancodes; the "scancode" is the index in its keymap and
-# Home is the first key in the gpio-keys node.
-ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="gpio-keys", ENV{KEYBOARD_KEY_0}="homepage", RUN{builtin}+="keyboard"

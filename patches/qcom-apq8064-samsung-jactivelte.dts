@@ -44,11 +44,17 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&gpio_keys_default>;
 
+		/*
+		 * KEY_HOMEPAGE (XF86HomePage) rather than KEY_HOME: it is what
+		 * the downstream kernel reported, and Phosh only accepts XF86
+		 * keysyms as unmodified shortcuts. Menu and Back already map
+		 * to XF86MenuKB and XF86Back.
+		 */
 		key-home {
 			label = "Home";
 			gpios = <&pm8921_gpio 30 GPIO_ACTIVE_LOW>;
 			debounce-interval = <5>;
-			linux,code = <KEY_HOME>;
+			linux,code = <KEY_HOMEPAGE>;
 			wakeup-source;
 		};
 
