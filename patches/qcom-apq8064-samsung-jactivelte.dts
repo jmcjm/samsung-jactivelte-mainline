@@ -433,8 +433,8 @@
 		};
 
 		/*
-		 * tabla2x-slim-CDC_VDDA_A_1P2V
-		 * tabla2x-slim-VDDD_CDC_D
+		 * riva_vddmx
+		 * krait memory rail (vdd_mem)
 		 */
 		pm8921_l24: l24 {
 			regulator-min-microvolt = <750000>;
@@ -442,6 +442,10 @@
 			bias-pull-down;
 		};
 
+		/*
+		 * tabla2x-slim-VDDD_CDC_D
+		 * tabla2x-slim-CDC_VDDA_A_1P2V
+		 */
 		pm8921_l25: l25 {
 			regulator-min-microvolt = <1250000>;
 			regulator-max-microvolt = <1250000>;
