@@ -45,6 +45,7 @@ WORKLOG.md  the full work log
 | `04-hfpll-max-rate-1944.patch` | lets the Krait HFPLLs run at 1944 MHz (mainline caps them at 1800 and silently runs 1782) |
 | `05-dsi-phy-timing-override-debug.patch` | debug only: override the D-PHY timings from the kernel command line |
 | `06-krait-uv-build.patch` | Kconfig/Makefile entries for the `krait-uv` module |
+| `07-mdp4-primary-plane-possible-crtcs.patch` | restricts mdp4's primary planes to their own CRTC; Weston 16 aborts on the default 0xff mask |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
@@ -79,6 +80,7 @@ WORKLOG.md  the full work log
    git apply ../patches/01-register-panel-and-dtb.patch
    git apply ../patches/04-hfpll-max-rate-1944.patch
    git apply ../patches/06-krait-uv-build.patch
+   git apply ../patches/07-mdp4-primary-plane-possible-crtcs.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/

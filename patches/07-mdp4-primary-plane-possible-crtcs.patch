@@ -1,0 +1,21 @@
+diff --git a/drivers/gpu/drm/msm/disp/mdp4/mdp4_kms.c b/drivers/gpu/drm/msm/disp/mdp4/mdp4_kms.c
+index bee9fa1e7a5..958e87102ac 100644
+--- a/drivers/gpu/drm/msm/disp/mdp4/mdp4_kms.c
++++ b/drivers/gpu/drm/msm/disp/mdp4/mdp4_kms.c
+@@ -436,6 +436,16 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
+ 			ret = PTR_ERR(crtc);
+ 			goto fail;
+ 		}
++
++		/*
++		 * The RGB pipes are wired to fixed paths (RGB1 -> DMA_P,
++		 * RGB2 -> DMA_E, see below). Advertise only the CRTC the
++		 * primary plane actually drives: with the default 0xff mask
++		 * the other CRTC's primary plane shows up as a candidate for
++		 * this one and compositors that expect the remaining planes
++		 * to be overlays (weston) abort.
++		 */
++		plane->possible_crtcs = drm_crtc_mask(crtc);
+ 	}
+ 
+ 	/*
