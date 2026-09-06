@@ -1093,3 +1093,9 @@ What each of them turned out to be:
   motivated the override turned out to be GPU hang loops and panel
   retention, not GTK's GL renderer. The variable is gone; only the GLES
   2.0 override stays.
+- **Boot on patch 11 with the backlight cap and the device-tree Home key**
+  (vmlinuz `963d909025fcccbd1891b57b6d4b4264`): SSH after 60 s, straight
+  into the Phosh session, `max_brightness` 182, gpio-keys reporting
+  KEY_HOMEPAGE/KEY_MENU/KEY_BACK without any udev rule, no renderer override
+  in the session, and devfreq finally moving: 122 transitions in the first
+  minute, 48 s at 27 MHz against 18 s at 450 MHz.
