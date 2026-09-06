@@ -1,0 +1,103 @@
+# dmesg excerpt: Adreno 320 hang under glmark2-es2-wayland (texture scene), 2026-09-06
+# kernel 7.2.0-postmarketos-qcom-apq8064 with patches 01/04/06/07, MESA_GLES_VERSION_OVERRIDE=2.0, Weston 16
+# The first recovery succeeds, the second one fails in a3xx_me_init (gpu hw init failed: -22);
+# from then on the hangcheck/recover cycle below repeats every second (71 lockups logged) until the phone is powered off.
+[  990.166772] [drm:mdp4_irq_error_handler] *ERROR* errors: 00000100
+[  990.233078] mdp4 5100000.display-controller: vblank time out, crtc=crtc-0
+[ 1007.036679] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002: hangcheck detected gpu lockup rb 0!
+[ 1007.036744] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     completed fence: 1701
+[ 1007.046713] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     submitted fence: 1704
+[ 1007.057193] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* 03020002: hangcheck recover!
+[ 1007.067350] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* 03020002: offending task: weston (weston --backend=drm --idle-time=0 --debug --log=/tmp/weston3.log)
+[ 1007.077450] revision: 320 (03020002)
+[ 1007.091862] rb 0: fence:    1702/1704
+[ 1007.095506] rptr:     4102
+[ 1007.099141] rb wptr:  4130
+[ 1007.101666] CP_SCRATCH_REG0: 0
+[ 1007.104355] CP_SCRATCH_REG1: 0
+[ 1007.107441] CP_SCRATCH_REG2: 1701
+[ 1007.110435] CP_SCRATCH_REG3: 0
+[ 1007.113817] CP_SCRATCH_REG4: 0
+[ 1007.116841] CP_SCRATCH_REG5: 0
+[ 1007.119810] CP_SCRATCH_REG6: 0
+[ 1007.122846] CP_SCRATCH_REG7: 0
+[ 1007.176723] ------------[ cut here ]------------
+[ 1007.176752] WARNING: drivers/gpu/drm/msm/msm_gpu_devfreq.c:107 at msm_devfreq_get_dev_status+0x214/0x220, CPU#3: kworker/u16:3/4243
+[ 1007.180412] Modules linked in: krait_uv nft_reject_inet nft_reject nf_reject_ipv6 nf_reject_ipv4 nft_ct nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 nf_tables algif_hash algif_skcipher af_alg uhid brcmfmac_wcc hci_uart btbcm bluetooth brcmfmac brcmutil cfg80211 qcom_rng rfkill ledtrig_pattern evdev libcomposite
+[ 1007.197234] CPU: 3 UID: 0 PID: 4243 Comm: kworker/u16:3 Not tainted 7.2.0-postmarketos-qcom-apq8064 #3-postmarketos-qcom-apq8064 PREEMPT 
+[ 1007.197243] Hardware name: Generic DT based system
+[ 1007.197248] Workqueue: devfreq_wq devfreq_monitor
+[ 1007.197265] Call trace: 
+[ 1007.197272]  unwind_backtrace from show_stack+0x28/0x30
+[ 1007.197291]  show_stack from dump_stack_lvl+0x50/0x5c
+[ 1007.197309]  dump_stack_lvl from __warn+0xfc/0x278
+[ 1007.197322]  __warn from warn_slowpath_fmt+0xc4/0x1e8
+[ 1007.197332]  warn_slowpath_fmt from msm_devfreq_get_dev_status+0x214/0x220
+[ 1007.197347]  msm_devfreq_get_dev_status from devfreq_simple_ondemand_func+0x5c/0x180
+[ 1007.197365]  devfreq_simple_ondemand_func from devfreq_update_target+0x6c/0x168
+[ 1007.197378]  devfreq_update_target from devfreq_monitor+0x30/0x168
+[ 1007.197389]  devfreq_monitor from process_scheduled_works+0x1fc/0x530
+[ 1007.197406]  process_scheduled_works from worker_thread+0x204/0x350
+[ 1007.197417]  worker_thread from kthread+0x138/0x170
+[ 1007.197430]  kthread from ret_from_fork+0x14/0x28
+[ 1007.197438] Exception stack(0xf2d3dfb0 to 0xf2d3dff8)
+[ 1007.197443] dfa0:                                     00000000 00000000 00000000 00000000
+[ 1007.197449] dfc0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+[ 1007.197455] dfe0: 00000000 00000000 00000000 00000000 00000013 00000000
+[ 1007.197460] ---[ end trace 0000000000000000 ]---
+[ 1008.116689] [drm:adreno_idle] *ERROR* 03020002: timeout waiting to drain ringbuffer 0 rptr/wptr = 0/1022
+[ 1009.046681] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002: hangcheck detected gpu lockup rb 0!
+[ 1009.046730] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     completed fence: 1702
+[ 1009.056694] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     submitted fence: 1705
+[ 1009.116684] [drm:adreno_idle] *ERROR* 03020002: timeout waiting to drain ringbuffer 0 rptr/wptr = 10/12
+[ 1009.116729] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* gpu hw init failed: -22
+[ 1009.124910] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* 03020002: hangcheck recover!
+[ 1009.133998] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* 03020002: offending task: glmark2-es2-way (glmark2-es2-wayland -b build:duration=5 -b texture:duration=5 -b shading:duration=5 -b effect2d:duration=5 -b desktop:duration=5 --size 540x960)
+[ 1009.144173] revision: 320 (03020002)
+[ 1009.166351] rb 0: fence:    1703/1705
+[ 1009.170007] rptr:     16
+[ 1009.173493] rb wptr:  46
+[ 1009.176097] CP_SCRATCH_REG0: 0
+[ 1009.178673] CP_SCRATCH_REG1: 0
+[ 1009.181480] CP_SCRATCH_REG2: 0
+[ 1009.184516] CP_SCRATCH_REG3: 0
+[ 1009.187614] CP_SCRATCH_REG4: 0
+[ 1009.190596] CP_SCRATCH_REG5: 0
+[ 1009.193632] CP_SCRATCH_REG6: 0
+[ 1009.196739] CP_SCRATCH_REG7: 0
+[ 1009.216835] ------------[ cut here ]------------
+[ 1009.216885] WARNING: drivers/gpu/drm/msm/msm_gpu_devfreq.c:107 at msm_devfreq_get_dev_status+0x214/0x220, CPU#3: kworker/u16:6/4291
+[ 1009.220616] Modules linked in: krait_uv nft_reject_inet nft_reject nf_reject_ipv6 nf_reject_ipv4 nft_ct nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 nf_tables algif_hash algif_skcipher af_alg uhid brcmfmac_wcc hci_uart btbcm bluetooth brcmfmac brcmutil cfg80211 qcom_rng rfkill ledtrig_pattern evdev libcomposite
+[ 1009.237391] CPU: 3 UID: 0 PID: 4291 Comm: kworker/u16:6 Tainted: G        W           7.2.0-postmarketos-qcom-apq8064 #3-postmarketos-qcom-apq8064 PREEMPT 
+[ 1009.237414] Tainted: [W]=WARN
+[ 1009.237421] Hardware name: Generic DT based system
+[ 1009.237430] Workqueue: devfreq_wq devfreq_monitor
+[ 1009.237461] Call trace: 
+[ 1009.237470]  unwind_backtrace from show_stack+0x28/0x30
+[ 1009.237506]  show_stack from dump_stack_lvl+0x50/0x5c
+[ 1009.237542]  dump_stack_lvl from __warn+0xfc/0x278
+[ 1009.237571]  __warn from warn_slowpath_fmt+0xc4/0x1e8
+[ 1009.237598]  warn_slowpath_fmt from msm_devfreq_get_dev_status+0x214/0x220
+[ 1009.237634]  msm_devfreq_get_dev_status from devfreq_simple_ondemand_func+0x5c/0x180
+[ 1009.237676]  devfreq_simple_ondemand_func from devfreq_update_target+0x6c/0x168
+[ 1009.237716]  devfreq_update_target from devfreq_monitor+0x30/0x168
+[ 1009.237751]  devfreq_monitor from process_scheduled_works+0x1fc/0x530
+[ 1009.237787]  process_scheduled_works from worker_thread+0x204/0x350
+[ 1009.237817]  worker_thread from kthread+0x138/0x170
+[ 1009.237847]  kthread from ret_from_fork+0x14/0x28
+[ 1009.237867] Exception stack(0xf2e19fb0 to 0xf2e19ff8)
+[ 1009.237882] 9fa0:                                     00000000 00000000 00000000 00000000
+[ 1009.237896] 9fc0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+[ 1009.237908] 9fe0: 00000000 00000000 00000000 00000000 00000013 00000000
+[ 1009.237918] ---[ end trace 0000000000000000 ]---
+[ 1010.196678] [drm:adreno_idle] *ERROR* 03020002: timeout waiting to drain ringbuffer 0 rptr/wptr = 0/2E
+[ 1011.046686] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002: hangcheck detected gpu lockup rb 0!
+[ 1011.046751] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     completed fence: 1703
+[ 1011.056698] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     submitted fence: 1705
+[ 1011.196675] [drm:adreno_idle] *ERROR* 03020002: timeout waiting to drain ringbuffer 0 rptr/wptr = 10/12
+[ 1011.196729] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* gpu hw init failed: -22
+[ 1012.086669] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002: hangcheck detected gpu lockup rb 0!
+[ 1012.086736] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     completed fence: 1703
+[ 1012.096710] mdp4 5100000.display-controller: [drm:hangcheck_handler] *ERROR* 03020002:     submitted fence: 1705
+[ 1012.196678] [drm:adreno_idle] *ERROR* 03020002: timeout waiting to drain ringbuffer 0 rptr/wptr = 10/12
+[ 1012.196765] mdp4 5100000.display-controller: [drm:recover_worker] *ERROR* 03020002: hangcheck recover!

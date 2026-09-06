@@ -761,3 +761,100 @@ apq8064-mainline published `qcom-apq8064-v7.2`. Checked what a move would cost:
   messages; dmesg is line-for-line the 7.1 one. Rollback copies:
   `/boot/*.71final` and `/root/modules-7.1.0.tar.gz`. The project's `linux/`
   checkout now sits on `qcom-apq8064-v7.2` with the patches reapplied.
+
+### GPU acceleration and a GUI — 2026-09-06, evening
+
+Started the GUI round: GPU firmware, Weston as the reference test, then Phosh.
+
+- **Firmware.** The pmOS repository has `firmware-qcom-adreno-a300` (the package
+  `device-samsung-jflte` depends on), which ships `qcom/a300_pm4.fw` and
+  `a300_pfp.fw`; nothing has to be pulled from the stock image. The earlier
+  worry about the firmware being requested before the rootfs is mounted was
+  wrong: msm loads the GPU firmware lazily on the first open of the DRM device
+  (`msm_open()` → `load_gpu()`, retried as long as `priv->gpu` is NULL), so a
+  plain `head -c0 /dev/dri/renderD128` after `apk add` brought the GPU up on
+  the running system (`loaded qcom/a300_pm4.fw from new location`, devfreq at
+  450 MHz; the DTSI only has the 27 and 450 MHz operating points).
+- **Weston 16 finds the GPU and then aborts.** `weston --backend=drm` (root,
+  seatd) reports `GL renderer: FD320`, EGL 1.5 (Mesa 26.1.6), GL ES 2.0, and
+  `weston-simple-egl` runs. A few seconds later the compositor dies on its own
+  assertion, `state-propose.c:874: plane->type == WDRM_PLANE_TYPE_OVERLAY
+  (0 == 2)`. mdp4 creates two primary planes (RGB1 for DMA_P, RGB2 for DMA_E)
+  and gives every plane `possible_crtcs = 0xff`, so the other CRTC's primary
+  plane ends up in Weston's list of overlay candidates. Weston 16 has no
+  non-atomic fallback any more (`WESTON_DISABLE_ATOMIC` ends in "Kernel DRM
+  KMS does not support DRM_CLIENT_CAP_ATOMIC"), so the fix went into the
+  kernel: `patches/07-mdp4-primary-plane-possible-crtcs.patch` sets
+  `plane->possible_crtcs = drm_crtc_mask(crtc)` for the primary planes right
+  after `mdp4_crtc_init()`, matching the fixed RGB1→DMA_P / RGB2→DMA_E paths
+  the driver documents itself. Ten `PRIMARY_INTF_UDERRUN` (`errors: 00000100`)
+  interrupts fired in the 150 ms around the crash and never otherwise.
+  Rebuilt as `linux-postmarketos-qcom-apq8064-7.1_p20260906180456-r2`
+  (vmlinuz `b8cbd8b592d4daef12d9a41eeb8c317e`, DTB unchanged) and installed
+  with `apk add --allow-untrusted`.
+- **Phosh.** `postmarketos-ui-phosh` plus `-openrc` (856 MiB, 869 packages).
+  phoc on its own worked on the unpatched kernel: wlroots only uses the primary
+  and cursor planes. The greeter (greetd + phrog) took four fixes, three of
+  them self-inflicted or packaging bugs:
+  - Starting busybox `syslogd` to capture logs replaced `/dev/log`, which
+    belongs to pmOS's `logbookd`. The phrog session script pipes its output
+    through `logger`, so the greeter died with "Broken pipe" and greetd
+    reported "greeter exited without creating a session". `rc-service logbookd
+    restart` recreates the socket; read the logs with `logread`. After that,
+    OpenRC remembers greetd as "crashed" and `start` only warns, so
+    `rc-service greetd zap` first.
+  - `stevia` (the renamed `phosh-osk-stub`) does not depend on its own
+    `stevia-schemas` subpackage. The OSK aborts with "Settings schema
+    'mobi.phosh.osk' is not installed", gnome-session treats the OSK as a
+    required component and marks the whole greeter session failed.
+    `apk add stevia-schemas`.
+  - elogind refused the power key, gpio-keys and MUIC evdev nodes ("Could not
+    take device: No such device"): the udev rules that tag devices for the
+    seat came with elogind in the same transaction, and the input devices
+    created at boot had no `seat` tag. `udevadm trigger --subsystem-match=input`
+    (or the next boot) fixes it; the touchscreen, bound later, was fine.
+  - jflte forces `MESA_GLES_VERSION_OVERRIDE=2.0` because freedreno's GLES 3.0
+    on a3xx is unstable. greetd builds the session environment from scratch,
+    so neither `/etc/conf.d/greetd` nor `/etc/profile.d` reaches phoc. Added
+    `session optional pam_env.so` to `/etc/pam.d/greetd` and the variable to
+    `/etc/environment`; verified in phoc's `/proc/<pid>/environ`.
+  Result: the phrog greeter renders at 1080x1920 (screenshot with `grim` as
+  the greetd user), phoc has `libgallium`, `libGLESv2` and `libEGL` mapped, so
+  it is the GPU and not pixman. RSS: phoc 120 MiB, phrog 137 MiB; 241 MiB used
+  in total with the greeter up. `seatd` is installed but not enabled: elogind
+  is the seat provider, and a running seatd only makes libseat try it first
+  and log a permission error.
+- **Headless bits undone.** `display-off.start` and `touchscreen-off.start`
+  moved to `/root/headless-scripts/`, the touchscreen bound again (Synaptics
+  SY 04 on event1), `greetd` added to the default runlevel. The device package
+  gained the `firmware-qcom-adreno-a300` dependency and jflte's
+  `adreno-a3xx-quirks.sh` in `/etc/profile.d/`.
+- **Verification after a power cycle** (kernel with patch 07,
+  vmlinuz `b8cbd8b592d4daef12d9a41eeb8c317e`): greetd brings the phrog
+  greeter up on its own, the OSK runs, no input-device errors, 236 MiB used.
+  Weston 16 now survives `weston-simple-egl` and a screenshot on the
+  patched kernel (`weston-screenshooter` needs `--debug`; the picture shows
+  the desktop shell and the EGL triangle). `glmark2-es2-wayland` reports
+  `GL_RENDERER: FD320` and runs `build` at 43 FPS at 540x960, then the GPU
+  hangs in the `texture` scene: `hangcheck detected gpu lockup rb 0`,
+  offending task weston. The first recovery worked, the second one failed
+  (`gpu hw init failed: -22`, i.e. `a3xx_me_init()` got no answer after the
+  reset), after which phoc reports `GL_CONTEXT_LOST` and cannot create an
+  FBO, the greeter is gone and only a power cycle brings the GPU back. This
+  is the freedreno/a3xx instability the jflte package warns about; the
+  GLES 2.0 override does not prevent it. The device tree is not the
+  difference: jflte enables the GPU the same way and the DTSI declares no
+  supplies for it. Plain UI work (greeter, shm textures, the Weston desktop)
+  has not triggered it so far. The full dmesg of the hang is in
+  `docs/gpu-hang-glmark2-2026-09-06.log` (excerpt).
+- **Two side effects of the UI packages** found on that boot:
+  - `postmarketos-base-ui` ships `50-random-mac.conf` for NetworkManager
+    (`wifi.cloned-mac-address=stable`), so the phone connected with a random
+    MAC and got a pool address instead of its static lease. Override in
+    `/etc/NetworkManager/conf.d/60-local-mac.conf` with
+    `wifi.cloned-mac-address=permanent`. `50-nftables.conf` and the
+    `nftables` service also came along; SSH still passes.
+  - `/sys/class/udc/` is empty although `ci_hdrc.0` is bound, so the USB
+    gadget (and the fallback network on it) is gone. Whether this comes
+    from the 7.2 move or from `postmarketos-usb-moded` is still open; the
+    cable was moved to a charger before it could be checked.

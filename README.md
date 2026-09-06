@@ -3,7 +3,8 @@
 A mainline Linux 7.2 port of the Galaxy S4 Active, built on top of the existing
 postmarketOS port for the regular Galaxy S4 (GT-I9505, `samsung-jflte`) and the
 [apq8064-mainline](https://github.com/apq8064-mainline/linux) kernel tree. The
-phone runs headless as a small home server, but the display works too.
+phone started as a headless home server; the display, the GPU and Phosh work
+too.
 
 This is not upstreamed to postmarketOS (yet). Everything needed to rebuild the
 kernel and the system image is in this repository; the kernel tree itself is
@@ -17,13 +18,14 @@ not vendored, see below.
 | eMMC, USB gadget networking, WiFi (BCM4335), Bluetooth firmware | works |
 | Display: JDI 1080x1920 TFT with a Renesas DSI controller | **works** (fbcon, DPMS on/off, cold start after cutting the rails) |
 | Backlight (DCS brightness through the panel controller) | works |
-| Touchscreen (Synaptics RMI4) | works, unbound by default on the headless setup |
+| Touchscreen (Synaptics RMI4) | works |
 | Keys (power, home, volume) | works after fixing the inverted IRQ polarity the bootloader leaves behind |
 | Battery gauge, charger with a constant-voltage limit (3.90 V, about 60 %) | works |
 | cpufreq 384 to 1944 MHz on the real clock, L2 at 1188 MHz, thermal throttling | works |
 | Runtime undervolting (`krait-uv` module) | works |
 | LED, sensors | LED works, sensors untested |
-| GPU (Adreno 320) | driver binds, firmware `qcom/a300_pm4.fw` / `a300_pfp.fw` not installed yet, so no acceleration so far |
+| GPU (Adreno 320) | **works** with `firmware-qcom-adreno-a300` and Mesa freedreno (GL ES 2.0 forced, see below); glmark2's texture scene hangs it and the hang is not recoverable |
+| Phosh (phoc, greetd + phrog greeter) | **works**, see "GUI" below |
 | Modem, audio, camera | not touched |
 
 ## Repository layout
@@ -114,6 +116,37 @@ WORKLOG.md  the full work log
    package to `/boot/` on the phone; lk2nd reads `/boot/extlinux/extlinux.conf`.
    `boot.img` is not used at all.
 
+## GUI
+
+The pmOS `phosh` UI works on top of the headless installation:
+
+```sh
+apk add postmarketos-ui-phosh postmarketos-ui-phosh-openrc stevia-schemas
+rc-update add greetd default
+```
+
+Notes, each of them cost time:
+
+- The GPU firmware is loaded lazily when the DRM device is first opened, so
+  no initramfs work and no reboot are needed after installing
+  `firmware-qcom-adreno-a300`.
+- `stevia-schemas` is missing from the dependencies of `stevia`, the on-screen
+  keyboard; without it gnome-session marks the greeter session as failed.
+- freedreno's GLES 3.0 on a3xx is unstable (the same quirk `device-samsung-jflte`
+  ships). greetd builds the session environment itself, so put
+  `MESA_GLES_VERSION_OVERRIDE=2.0` in `/etc/environment` and add
+  `session optional pam_env.so` to `/etc/pam.d/greetd`.
+- pmOS logs through `logbookd` (`logread`). Do not start busybox `syslogd` next
+  to it: it steals `/dev/log`, and the greeter script dies on its `logger` pipe.
+- Weston 16 needs patch 07, phoc (wlroots) does not.
+- `postmarketos-base-ui` makes NetworkManager use a random MAC per Wi-Fi
+  connection (`50-random-mac.conf`); put `wifi.cloned-mac-address=permanent`
+  in `/etc/NetworkManager/conf.d/` if the phone has a static DHCP lease.
+- The GPU is not stable under load: `glmark2-es2-wayland` hangs it in the
+  `texture` scene and the second recovery fails (`gpu hw init failed`), so
+  only a power cycle brings it back. The compositors themselves have not
+  triggered it.
+
 ## Things that cost days, so you do not repeat them
 
 - **PMIC pin numbers in the device tree are physical (from 1).** The
@@ -142,11 +175,12 @@ WORKLOG.md  the full work log
 
 ## Operating notes for the headless setup
 
-- `/etc/local.d/display-off.start` detaches fbcon and blanks the panel after
-  boot, which also cuts its rails. Turn it back on with
+- Headless variant: `work/display-off.start` detaches fbcon and blanks the
+  panel after boot, which also cuts its rails, and `work/touchscreen-off.start`
+  unbinds the touchscreen so it stops waking a core. Drop them into
+  `/etc/local.d/` and remove greetd from the default runlevel. Relight with
   `echo 0 > /sys/class/graphics/fb0/blank` (and `echo 1 >
-  /sys/class/vtconsole/vtcon1/bind` for the console). Delete the script to keep
-  the display on permanently.
+  /sys/class/vtconsole/vtcon1/bind` for the console).
 - `/etc/local.d/krait-uv.start` applies -50 mV below 1134 MHz and -75 mV above,
   with the regulator floor at 850 mV. -100 mV on the top states hangs this unit.
 - The charger limit lives in the DTS (`maxim,constant-microvolt`), verified
