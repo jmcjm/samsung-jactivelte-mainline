@@ -954,3 +954,15 @@ What each of them turned out to be:
   over the screen (Y x 1.06) made the bar reachable but put every touch
   visibly below the finger near the bottom; rejected. The Home key is the
   way to the overview instead.
+- **Two follow-ups from the greeter.** `/etc/environment` came out of the
+  hard hang with a block of NUL bytes where `GSK_RENDERER=cairo` had just
+  been appended, so pam_env delivered the GLES override but not the GTK4
+  renderer, and phrog kept drawing through GL with its shadows. Rewritten;
+  anything written seconds before a hard reset on this ext4-over-loop root
+  deserves a `grep -P '\x00'` afterwards. Second, greeter sessions leave their
+  `dbus-daemon`, `pulseaudio` and `feedbackd` behind under the `greetd` user
+  (two sets after two logins), and the handoff from phrog to the user's
+  session lets the greeter's compositor paint a late frame that the session's
+  phoc never repaints (it only redraws damage), which shows up as greeter
+  remnants over Phosh until the next full repaint, for example a DPMS cycle
+  from the power key.
