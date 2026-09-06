@@ -1,0 +1,19 @@
+#!/bin/sh
+# Status LED: a breathing #33ccff (R:G:B = 51:204:255 scaled to a peak of 10).
+# Cycle: 1.5 s ramping up, 1.5 s fading out, 1 s dark.
+#
+# The write order matters: writing "pattern" starts the pattern countdown and
+# writing "repeat" restarts it. So set repeat FIRST and pattern LAST - otherwise
+# the channels start at different moments, drift out of phase, and instead of one
+# colour you see the mix sweep through pure blue and green.
+modprobe ledtrig-pattern 2>/dev/null
+
+for l in red green blue; do
+	echo pattern > /sys/class/leds/$l:status/trigger
+	echo -1 > /sys/class/leds/$l:status/repeat
+done
+
+# Start the patterns as close together as possible so the phases line up.
+echo "0 1500 2 1500 0 1000"  > /sys/class/leds/red:status/pattern
+echo "0 1500 8 1500 0 1000"  > /sys/class/leds/green:status/pattern
+echo "0 1500 10 1500 0 1000" > /sys/class/leds/blue:status/pattern

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Headless server: the screen shows nothing, so the touchscreen is pure cost.
+# Every touch generated interrupts on core 0 (thousands of them in
+# /proc/interrupts), woke it up and pushed the frequency up through schedutil.
+#
+# To get touch back: delete this file and run
+#   echo 3-0020 > /sys/bus/i2c/drivers/rmi4_i2c/bind
+for d in /sys/bus/i2c/drivers/rmi4_i2c/[0-9]*-[0-9a-f]*; do
+	[ -e "$d" ] || continue
+	basename "$d" > /sys/bus/i2c/drivers/rmi4_i2c/unbind 2>/dev/null
+done

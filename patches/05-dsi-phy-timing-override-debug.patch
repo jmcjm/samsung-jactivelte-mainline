@@ -1,0 +1,93 @@
+diff --git a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm_8960.c b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm_8960.c
+index 8dcce9581..fcfb341bd 100644
+--- a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm_8960.c
++++ b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm_8960.c
+@@ -5,6 +5,7 @@
+ 
+ #include <dt-bindings/clock/qcom,dsi-phy-28nm.h>
+ #include <linux/clk-provider.h>
++#include <linux/module.h>
+ #include <linux/delay.h>
+ 
+ #include "dsi_phy.h"
+@@ -569,6 +570,71 @@ static void dsi_28nm_phy_lane_config(struct msm_dsi_phy *phy)
+ 	writel(0x88, base + REG_DSI_28nm_8960_PHY_LNCK_TEST_STR1);
+ }
+ 
++/*
++ * Debug knobs: replace the computed D-PHY timings with a fixed table, as
++ * programmed by a vendor bootloader. "dsi_phy_timing" takes the twelve
++ * TIMING_CTRL_0..11 bytes as hex separated by commas; clk_pre/clk_post
++ * override the shared timings handed to the host.
++ */
++static char *dsi_phy_timing;
++module_param(dsi_phy_timing, charp, 0644);
++MODULE_PARM_DESC(dsi_phy_timing, "Fixed 28nm-8960 D-PHY TIMING_CTRL_0..11 bytes (hex, comma separated)");
++
++static int dsi_phy_clk_pre = -1;
++module_param(dsi_phy_clk_pre, int, 0644);
++static int dsi_phy_clk_post = -1;
++module_param(dsi_phy_clk_post, int, 0644);
++
++static void dsi_28nm_phy_apply_override(struct msm_dsi_phy *phy,
++					struct msm_dsi_dphy_timing *timing)
++{
++	u8 v[12];
++	const char *p = dsi_phy_timing;
++	int i;
++
++	if (dsi_phy_clk_pre >= 0) {
++		timing->shared_timings.clk_pre = dsi_phy_clk_pre;
++		timing->shared_timings.clk_pre_inc_by_2 = false;
++	}
++	if (dsi_phy_clk_post >= 0)
++		timing->shared_timings.clk_post = dsi_phy_clk_post;
++
++	if (!p || !*p)
++		return;
++
++	for (i = 0; i < 12; i++) {
++		char *end;
++		unsigned long val = simple_strtoul(p, &end, 16);
++
++		if (end == p || val > 0xff) {
++			DRM_DEV_ERROR(&phy->pdev->dev,
++				      "bad dsi_phy_timing at byte %d\n", i);
++			return;
++		}
++		v[i] = val;
++		p = end;
++		if (*p == ',')
++			p++;
++	}
++
++	timing->clk_zero = v[0];
++	timing->clk_trail = v[1];
++	timing->clk_prepare = v[2];
++	timing->hs_exit = v[4];
++	timing->hs_zero = v[5];
++	timing->hs_prepare = v[6];
++	timing->hs_trail = v[7];
++	timing->hs_rqst = v[8];
++	timing->ta_go = v[9] & 0x7;
++	timing->ta_sure = (v[9] >> 4) & 0x7;
++	timing->ta_get = v[10];
++
++	DRM_DEV_INFO(&phy->pdev->dev,
++		     "D-PHY timing override: %*ph, clk_pre=%d clk_post=%d\n",
++		     12, v, timing->shared_timings.clk_pre,
++		     timing->shared_timings.clk_post);
++}
++
+ static int dsi_28nm_phy_enable(struct msm_dsi_phy *phy,
+ 				struct msm_dsi_phy_clk_request *clk_req)
+ {
+@@ -584,6 +650,8 @@ static int dsi_28nm_phy_enable(struct msm_dsi_phy *phy,
+ 		return -EINVAL;
+ 	}
+ 
++	dsi_28nm_phy_apply_override(phy, timing);
++
+ 	dsi_28nm_phy_regulator_init(phy);
+ 
+ 	writel(0x04, base + REG_DSI_28nm_8960_PHY_LDO_CTRL);

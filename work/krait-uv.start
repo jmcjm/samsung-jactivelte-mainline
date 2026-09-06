@@ -1,0 +1,15 @@
+#!/bin/sh
+# Undervolt CPU: operating points below MIN_KHZ get LOW, the rest get HIGH (uV, relative to
+# the device tree values, floor 850 mV = saw*_vreg minimum). Established 2026-09-06 with a
+# 4-core integrity stress ladder: the high states hang at -100000, so -75000 keeps 25 mV
+# of margin. Disable by deleting this file; 'echo reset > /sys/kernel/krait_uv/set' undoes it live.
+MIN_KHZ=1134000
+LOW=-50000
+HIGH=-75000
+modprobe krait-uv || exit 0
+K=/sys/kernel/krait_uv
+while read khz cur def; do
+	if [ "$khz" -ge "$MIN_KHZ" ]; then v=$((def + HIGH)); else v=$((def + LOW)); fi
+	[ $v -lt 850000 ] && v=850000
+	echo "$khz $v" > $K/set
+done < $K/table

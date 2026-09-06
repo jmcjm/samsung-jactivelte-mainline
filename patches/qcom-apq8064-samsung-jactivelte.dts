@@ -1,0 +1,1158 @@
+// SPDX-License-Identifier: GPL-2.0-only
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/mfd/qcom-rpm.h>
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+#include <dt-bindings/pinctrl/qcom,pmic-mpp.h>
+
+#include "qcom-apq8064-v2.0.dtsi"
+#include "pm8821.dtsi"
+#include "pm8921.dtsi"
+
+/ {
+	model = "Samsung Galaxy S4 Active (jactivelte)";
+	compatible = "samsung,jactivelte", "qcom,apq8064";
+	chassis-type = "handset";
+
+	aliases {
+		serial0 = &gsbi7_serial;
+		serial1 = &gsbi6_serial;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		ramoops@88d00000 {
+			compatible = "ramoops";
+			reg = <0x88d00000 0x100000>;
+			record-size = <0x20000>;
+			console-size = <0x20000>;
+			ftrace-size = <0x20000>;
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&gpio_keys_default>;
+
+		key-home {
+			label = "Home";
+			gpios = <&pm8921_gpio 30 GPIO_ACTIVE_LOW>;
+			debounce-interval = <5>;
+			linux,code = <KEY_HOME>;
+			wakeup-source;
+		};
+
+		key-volume-up {
+			label = "Volume Up";
+			gpios = <&pm8921_gpio 35 GPIO_ACTIVE_LOW>;
+			debounce-interval = <5>;
+			linux,code = <KEY_VOLUMEUP>;
+			wakeup-source;
+		};
+
+		key-volume-down {
+			label = "Volume Down";
+			gpios = <&pm8921_gpio 37 GPIO_ACTIVE_LOW>;
+			debounce-interval = <5>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			wakeup-source;
+		};
+	};
+
+	i2c-muic {
+		compatible = "i2c-gpio";
+ 		sda-gpios = <&tlmm_pinmux 22 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+  		scl-gpios = <&tlmm_pinmux 23 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		max77693: pmic@66 {
+			compatible = "maxim,max77693";
+			reg = <0x66>;
+			interrupt-parent = <&tlmm_pinmux>;
+			interrupts = <55 IRQ_TYPE_EDGE_FALLING>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&muic_int_default_state>;
+
+			muic: muic {
+				compatible = "maxim,max77693-muic";
+				safeout1-supply = <&esafeout1_reg>;
+				safeout2-supply = <&esafeout2_reg>;
+			};
+
+			charger {
+				compatible = "maxim,max77693-charger";
+
+				/*
+				 * Stop charging at 3.90 V instead of the stock
+				 * 4.35 V, which parks the cell near 60% charge
+				 * (3.85 V held it at 47-48%).
+				 * This device runs as an always-on server, so
+				 * calendar ageing at a high state of charge -
+				 * not cycle count - is what kills the battery.
+				 * Costs runtime on battery, which is not a
+				 * concern here.
+				 */
+				maxim,constant-microvolt = <3900000>;
+			};
+
+			regulators {
+				esafeout1_reg: ESAFEOUT1 {
+					regulator-name = "ESAFEOUT1";
+				};
+
+				esafeout2_reg: ESAFEOUT2 {
+					regulator-name = "ESAFEOUT2";
+				};
+			};
+		};
+	};
+
+	i2c-led {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm_pinmux 6 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm_pinmux 7 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		led-controller@30 {
+			compatible = "panasonic,an30259a";
+			reg = <0x30>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			led@1 {
+				reg = <1>;
+				function = LED_FUNCTION_STATUS;
+				color = <LED_COLOR_ID_RED>;
+			};
+
+			led@2 {
+				reg = <2>;
+				function = LED_FUNCTION_STATUS;
+				color = <LED_COLOR_ID_GREEN>;
+			};
+
+			led@3 {
+				reg = <3>;
+				function = LED_FUNCTION_STATUS;
+				color = <LED_COLOR_ID_BLUE>;
+			};
+		};
+	};
+
+	i2c-fg {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm_pinmux 0 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm_pinmux 1 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		fuel-gauge@36 {
+			compatible = "maxim,max17048";
+			reg = <0x36>;
+			interrupt-parent = <&tlmm_pinmux>;
+			interrupts = <29 IRQ_TYPE_EDGE_FALLING>;
+			power-supplies = <&muic>;
+			maxim,alert-low-soc-level = <4>;
+			maxim,double-soc;
+			maxim,rcomp = /bits/ 8 <0x88>;
+			wakeup-source;
+		};
+	};
+
+	ice4_gpio: gpio-controller {
+		compatible = "samsung,ice4-gpio";
+		scl-gpios = <&pm8921_mpps 9 GPIO_ACTIVE_HIGH>;
+		sda-gpios = <&pm8921_mpps 10 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ice4_mpp_state>, <&ice4_reset_state>,
+			    <&ice4_main_clk_state>;
+		creset-gpios = <&pm8921_gpio 9 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pm8921_gpio 36 GPIO_ACTIVE_HIGH>;
+		cdone-gpios = <&tlmm_pinmux 38 GPIO_ACTIVE_HIGH>;
+		vdd-supply = <&pm8921_l9>;
+		vio-supply = <&pm8921_lvs4>;
+		vcore-supply = <&pm8917_l33>;
+		clocks = <&gcc GP0_CLK>;
+		clock-names = "core";
+		firmware-name = "samsung/ice4.bin";
+		samsung,high-gpio-regs;
+
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&ice4_gpio 3 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <200>;
+		power-off-delay-us = <200000>;
+	};
+};
+
+&gsbi6 {
+	qcom,mode = <GSBI_PROT_UART_W_FC>;
+
+	status = "okay";
+};
+
+&gsbi6_serial {
+	uart-has-rtscts;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gsbi6_uart_pin_a>;
+
+	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm4335a0";
+		max-speed = <3000000>;
+		shutdown-gpios = <&ice4_gpio 4 GPIO_ACTIVE_HIGH>;
+		device-wakeup-gpios = <&ice4_gpio 5 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&gsbi7 {
+	qcom,mode = <GSBI_PROT_I2C_UART>;
+
+	status = "okay";
+};
+
+&gsbi7_serial {
+	pinctrl-names = "default";
+	pinctrl-0 = <&gsbi7_uart_pin_a>;
+
+	status = "okay";
+};
+
+&pm8821 {
+	interrupts-extended = <&tlmm_pinmux 76 IRQ_TYPE_LEVEL_LOW>;
+};
+
+&pm8921 {
+	interrupts-extended = <&tlmm_pinmux 74 IRQ_TYPE_LEVEL_LOW>;
+
+	pm8917_l33: regulator-l33 {
+		compatible = "qcom,pm8917-l33";
+		regulator-name = "8917_l33";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+	};
+};
+
+&riva {
+	status = "disabled";
+};
+
+&gpu {
+	status = "okay";
+};
+
+&rpm {
+	regulators {
+		compatible = "qcom,rpm-pm8921-regulators";
+
+		vdd_l1_l2_l12_l18-supply = <&pm8921_s4>;
+		vdd_l24-supply = <&pm8921_s1>;
+		vdd_l25-supply = <&pm8921_s1>;
+		vdd_l26-supply = <&pm8921_s7>;
+		vdd_l27-supply = <&pm8921_s7>;
+		vdd_l28-supply = <&pm8921_s7>;
+		vin_lvs1_3_6-supply = <&pm8921_s4>;
+		vin_lvs2-supply = <&pm8921_s1>;
+		vin_lvs4_5_7-supply = <&pm8921_s4>;
+
+		pm8921_l1: l1 {
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			regulator-always-on;
+			bias-pull-down;
+		};
+
+		/* mipi_dsi.1-dsi1_pll_vdda */
+		pm8921_l2: l2 {
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			/* DSI PLL, msm_dsi requests 100 mA */
+			regulator-allow-set-load;
+			bias-pull-down;
+		};
+
+		/* msm_otg-HSUSB_3p3 */
+		pm8921_l3: l3 {
+			regulator-min-microvolt = <3075000>;
+			regulator-max-microvolt = <3500000>;
+			bias-pull-down;
+		};
+
+		/* msm_otg-HSUSB_1p8 */
+		pm8921_l4: l4 {
+			regulator-always-on;
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		/* msm_sdcc.1-sdc_vdd */
+		pm8921_l5: l5 {
+			regulator-min-microvolt = <2950000>;
+			regulator-max-microvolt = <2950000>;
+			bias-pull-down;
+		};
+
+		/* earjack_debug */
+		pm8921_l6: l6 {
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			bias-pull-down;
+		};
+
+		/* mipi_dsi.1-dsi_vci */
+		pm8921_l8: l8 {
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <3000000>;
+			/* DSI, msm_dsi requests 10 mA */
+			regulator-allow-set-load;
+			bias-pull-down;
+		};
+
+		/* wcnss_wlan.0-iris_vddpa */
+		pm8921_l10: l10 {
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+			bias-pull-down;
+		};
+
+		/* mipi_dsi.1-dsi1_avdd */
+		pm8921_l11: l11 {
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <2850000>;
+			/* DSI PHY, msm_dsi requests 100 mA */
+			regulator-allow-set-load;
+			bias-pull-down;
+		};
+
+		/* ice4_fpga-vdd */
+		pm8921_l9: l9 {
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <2850000>;
+			bias-pull-down;
+		};
+
+		/* touch_vdd (downstream Synaptics uses l17 at 3.3V) */
+		pm8921_l17: l17 {
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			bias-pull-down;
+		};
+
+		/* legacy comment kept for prior first-pass attempt */
+		pm8921_l15: l15 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <2950000>;
+			/* panel VDD, the panel driver requests 100 mA so the RPM keeps HPM */
+			regulator-allow-set-load;
+			bias-pull-down;
+		};
+
+		/* panel avdd, aboot programs this LDO to 3.0 V */
+		pm8921_l16: l16 {
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			/* panel AVDD, the panel driver requests 100 mA so the RPM keeps HPM */
+			regulator-allow-set-load;
+			bias-pull-down;
+		};
+
+		/* slimport_dvdd */
+		pm8921_l18: l18 {
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			bias-pull-down;
+		};
+
+		/* touch_io */
+		pm8921_l22: l22 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			bias-pull-down;
+		};
+
+		/*
+		 * mipi_dsi.1-dsi_vddio
+		 * pil_qdsp6v4.1-pll_vdd
+		 * pil_qdsp6v4.2-pll_vdd
+		 * msm_ehci_host.0-HSUSB_1p8
+		 * msm_ehci_host.1-HSUSB_1p8
+		 */
+		pm8921_l23: l23 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			bias-pull-down;
+		};
+
+		/*
+		 * tabla2x-slim-CDC_VDDA_A_1P2V
+		 * tabla2x-slim-VDDD_CDC_D
+		 */
+		pm8921_l24: l24 {
+			regulator-min-microvolt = <750000>;
+			regulator-max-microvolt = <1150000>;
+			bias-pull-down;
+		};
+
+		pm8921_l25: l25 {
+			regulator-min-microvolt = <1250000>;
+			regulator-max-microvolt = <1250000>;
+			regulator-always-on;
+			bias-pull-down;
+		};
+
+		pm8921_l26: l26 {
+			regulator-min-microvolt = <375000>;
+			regulator-max-microvolt = <1050000>;
+			regulator-always-on;
+			bias-pull-down;
+		};
+
+		pm8921_l27: l27 {
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+		};
+
+		pm8921_l28: l28 {
+			regulator-min-microvolt = <1050000>;
+			regulator-max-microvolt = <1050000>;
+			bias-pull-down;
+		};
+
+		/* wcnss_wlan.0-iris_vddio */
+		pm8921_lvs1: lvs1 {
+			bias-pull-down;
+		};
+
+		/* wcnss_wlan.0-iris_vdddig */
+		pm8921_lvs2: lvs2 {
+			bias-pull-down;
+		};
+
+		pm8921_lvs3: lvs3 {
+			bias-pull-down;
+		};
+
+		pm8921_lvs4: lvs4 {
+			bias-pull-down;
+		};
+
+		pm8921_lvs5: lvs5 {
+			bias-pull-down;
+		};
+
+		/* mipi_dsi.1-dsi_iovcc */
+		pm8921_lvs6: lvs6 {
+			bias-pull-down;
+		};
+
+		/*
+		 * pil_riva-pll_vdd
+		 * lvds.0-lvds_vdda
+		 * mipi_dsi.1-dsi1_vddio
+		 * hdmi_msm.0-hdmi_vdda
+		 */
+		pm8921_lvs7: lvs7 {
+			bias-pull-down;
+		};
+
+		pm8921_ncp: ncp {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			qcom,switch-mode-frequency = <1600000>;
+		};
+
+		/* Buck SMPS */
+		pm8921_s1: s1 {
+			regulator-always-on;
+			regulator-min-microvolt = <1225000>;
+			regulator-max-microvolt = <1225000>;
+			qcom,switch-mode-frequency = <3200000>;
+			bias-pull-down;
+		};
+
+		pm8921_s2: s2 {
+			regulator-min-microvolt = <1300000>;
+			regulator-max-microvolt = <1300000>;
+			qcom,switch-mode-frequency = <1600000>;
+			bias-pull-down;
+		};
+
+		/* msm otg HSUSB_VDDCX */
+		pm8921_s3: s3 {
+			regulator-min-microvolt = <500000>;
+			regulator-max-microvolt = <1150000>;
+			qcom,switch-mode-frequency = <4800000>;
+			bias-pull-down;
+		};
+
+		/*
+		 * msm_sdcc.1-sdc-vdd_io
+		 * tabla2x-slim-CDC_VDDA_RX
+		 * tabla2x-slim-CDC_VDDA_TX
+		 * tabla2x-slim-CDC_VDD_CP
+		 * tabla2x-slim-VDDIO_CDC
+		 */
+		pm8921_s4: s4 {
+			regulator-always-on;
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			qcom,switch-mode-frequency = <1600000>;
+			bias-pull-down;
+			qcom,force-mode = <QCOM_RPM_FORCE_MODE_AUTO>;
+		};
+
+		/*
+		 * supply vdd_l26, vdd_l27, vdd_l28
+		 */
+		pm8921_s7: s7 {
+			regulator-min-microvolt = <1300000>;
+			regulator-max-microvolt = <1300000>;
+			qcom,switch-mode-frequency = <3200000>;
+		};
+
+		pm8921_s8: s8 {
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <2200000>;
+			qcom,switch-mode-frequency = <1600000>;
+		};
+	};
+};
+
+/* eMMC */
+&sdcc1 {
+	vmmc-supply = <&pm8921_l5>;
+	vqmmc-supply = <&pm8921_s4>;
+
+	status = "okay";
+};
+
+&sdcc3 {
+	max-frequency = <48000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdcc3_default_state>;
+	bus-width = <4>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	non-removable;
+	qcom,sdio-ocr-mask = <0x00018080>;
+	/delete-property/ no-1-8-v;
+	vmmc-supply = <&pm8921_l4>;
+	/delete-property/ vqmmc-supply;
+
+	status = "okay";
+
+	wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4335-fmac", "brcm,bcm4329-fmac";
+		brcm,board-type = "samsung,jflte";
+	};
+};
+
+&gsbi3 {
+	qcom,mode = <GSBI_PROT_I2C>;
+	status = "okay";
+};
+
+&gsbi3_i2c {
+	clock-frequency = <200000>;
+	status = "okay";
+
+	touchscreen@20 {
+		compatible = "syna,rmi4-i2c";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm_pinmux>;
+		interrupts = <67 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_irq_default_state>;
+		syna,startup-delay-ms = <100>;
+		vdd-supply = <&pm8921_l17>;
+		vio-supply = <&pm8921_l22>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rmi4-f01@1 {
+			reg = <0x1>;
+		};
+
+		rmi4-f11@11 {
+			reg = <0x11>;
+			syna,sensor-type = <1>;
+		};
+
+		rmi4-f12@12 {
+			reg = <0x12>;
+			syna,sensor-type = <1>;
+			touchscreen-size-x = <1080>;
+			touchscreen-size-y = <1920>;
+		};
+
+		rmi4-f1a@1a {
+			reg = <0x1a>;
+			linux,keycodes = <KEY_MENU KEY_BACK>;
+		};
+	};
+};
+
+&mdp {
+	status = "okay";
+};
+
+&mdp_dsi1_out {
+	remote-endpoint = <&dsi0_in>;
+};
+
+&dsi0 {
+	vdda-supply = <&pm8921_l2>;
+	vdd-supply = <&pm8921_l8>;
+	vddio-supply = <&pm8921_lvs7>;
+	avdd-supply = <&pm8921_l11>;
+
+	/*
+	 * DSI musi zostac wlaczone, mimo ze panel i tak nie wyswietla obrazu.
+	 * MDP ma assigned-clock-parents wskazujace na PLL w DSI PHY, wiec przy
+	 * wylaczonym DSI szuka zegara u dostawcy, ktory nigdy nie zaprobuje,
+	 * i rozruch wiesza sie bez zadnego wpisu w logu.
+	 */
+	status = "okay";
+
+	panel@0 {
+		reg = <0>;
+		compatible = "samsung,renesas-tft-fhd";
+
+		iovdd-supply = <&pm8921_lvs1>;
+		vdd-supply = <&pm8921_l15>;
+		avdd-supply = <&pm8921_l16>;
+
+		/*
+		 * LCD_22V_EN, LCD_22V_EN_2, LED_DRIVER and MLCD_RST on the
+		 * downstream board. The pm8xxx gpio and mpp bindings take the
+		 * physical pin number (their of_xlate subtracts one), so PMIC
+		 * GPIO 31 and MPP 2 are written as such.
+		 */
+		enable-gpios = <&tlmm_pinmux 33 GPIO_ACTIVE_HIGH>;
+		enable2-gpios = <&tlmm_pinmux 20 GPIO_ACTIVE_HIGH>;
+		backlight-gpios = <&pm8921_gpio 31 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pm8921_mpps 2 GPIO_ACTIVE_LOW>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi0_out>;
+			};
+		};
+	};
+};
+
+&dsi0_in {
+	remote-endpoint = <&mdp_dsi1_out>;
+};
+
+&dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
+
+&dsi0_phy {
+	vddio-supply = <&pm8921_lvs7>;
+	status = "okay";
+};
+
+&pm8921_mpps {
+	ice4_mpp_state: ice4-mpp-state {
+		pins = "mpp9", "mpp10";
+		function = "digital";
+		power-source = <PM8921_MPP_S4>;
+		input-enable;
+		bias-pull-up = <30000>;
+		output-low;
+	};
+};
+
+&pm8921_gpio {
+	ice4_reset_state: ice4-reset-state {
+		pins = "gpio9", "gpio36";
+		function = PMIC_GPIO_FUNC_NORMAL;
+		power-source = <PM8921_GPIO_S4>;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+		drive-push-pull;
+		bias-disable;
+		output-low;
+	};
+
+	gpio_keys_default: gpio-keys-default-state {
+		pins = "gpio30", "gpio35", "gpio37";
+		function = PMIC_GPIO_FUNC_NORMAL;
+		input-enable;
+		bias-pull-up;
+		power-source = <PM8921_GPIO_S4>;
+		/*
+		 * The bootloader leaves the volume keys with an inverted
+		 * interrupt polarity. gpio_get() reads the line through the
+		 * PMIC IRQ block, so without this both keys report pressed
+		 * while released and the initramfs drops into its debug shell.
+		 */
+		qcom,no-inversion;
+	};
+};
+
+&tlmm_pinmux {
+	ice4_main_clk_state: ice4-main-clk-state {
+		pins = "gpio34";
+		function = "gp_clk_0b";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+
+	gsbi6_uart_pin_a: gsbi6-uart-pin-active-state {
+		rts-pins {
+			pins = "gpio17";
+			function = "gsbi6";
+			drive-strength = <8>;
+			bias-disable;
+		};
+
+		cts-rx-pins {
+			pins = "gpio16", "gpio15";
+			function = "gsbi6";
+			drive-strength = <8>;
+			bias-disable;
+		};
+
+		tx-pins {
+			pins = "gpio14";
+			function = "gsbi6";
+			drive-strength = <8>;
+			bias-disable;
+		};
+	};
+
+	gsbi7_uart_pin_a: gsbi7-uart-pin-active-state {
+		rx-pins {
+			pins = "gpio83";
+			function = "gsbi7";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+
+		tx-pins {
+			pins = "gpio82";
+			function = "gsbi7";
+			drive-strength = <4>;
+			bias-disable;
+		};
+	};
+
+	muic_int_default_state: muic-int-default-state {
+		pins = "gpio55";
+		function = "gpio";
+		drive-strength = <2>;
+		input-enable;
+		bias-disable;
+	};
+
+	touch_irq_default_state: touch-irq-default-state {
+		pins = "gpio67";
+		function = "gpio";
+		drive-strength = <2>;
+		input-enable;
+		bias-disable;
+	};
+};
+
+&usb_hs1_phy {
+       v3p3-supply = <&pm8921_l3>;
+       v1p8-supply = <&pm8921_l4>;
+       extcon = <&muic>;
+};
+
+&usb1 {
+       dr_mode = "otg";
+       extcon = <&muic>, <&pm8921>;
+
+       status = "okay";
+};
+
+/*
+ * Skalowanie czestotliwosci CPU (cpufreq). Sterowniki KRAITCC, QCOM_HFPLL
+ * i ARM_QCOM_CPUFREQ_NVMEM sa juz wkompilowane - brakowalo wylacznie opisu
+ * sprzetu. Napiecia pochodza z downstreamowego acpuclock-8064.c, speed bin 2
+ * (wariant 2000 MHz), ktory odpowiada APQ8064AB w tym telefonie.
+ */
+&qfprom {
+	speedbin_efuse: speedbin@c0 {
+		reg = <0xc0 0x4>;
+	};
+};
+
+&cpu0 {
+	clocks = <&kraitcc 0>;
+	operating-points-v2 = <&cpu_opp_table>;
+	cpu-supply = <&saw0_vreg>;
+	#cooling-cells = <2>;
+};
+
+&cpu1 {
+	clocks = <&kraitcc 1>;
+	operating-points-v2 = <&cpu_opp_table>;
+	cpu-supply = <&saw1_vreg>;
+	#cooling-cells = <2>;
+};
+
+&cpu2 {
+	clocks = <&kraitcc 2>;
+	operating-points-v2 = <&cpu_opp_table>;
+	cpu-supply = <&saw2_vreg>;
+	#cooling-cells = <2>;
+};
+
+&cpu3 {
+	clocks = <&kraitcc 3>;
+	operating-points-v2 = <&cpu_opp_table>;
+	cpu-supply = <&saw3_vreg>;
+	#cooling-cells = <2>;
+};
+
+/ {
+	kraitcc: clock-controller {
+		compatible = "qcom,krait-cc-v1";
+		clocks = <&gcc PLL9>, <&gcc PLL10>, <&gcc PLL16>, <&gcc PLL17>,
+			 <&acc0>, <&acc1>, <&acc2>, <&acc3>, <&pxo_board>;
+		clock-names = "hfpll0", "hfpll1", "hfpll2", "hfpll3",
+			      "acpu0_aux", "acpu1_aux", "acpu2_aux", "acpu3_aux",
+			      "qsb";
+		#clock-cells = <1>;
+
+		/*
+		 * Nic w mainline nie skaluje cache: qcom-cpufreq-nvmem steruje
+		 * wylacznie rdzeniami, a krait_cc_probe zostawia L2 na czestotliwosci
+		 * pomocniczej 384 MHz ("L2 @ Undefined rate. Forcing new rate").
+		 * Przy rdzeniach na 1890 MHz to powazne waskie gardlo. Downstream
+		 * trzyma w tym punkcie L2(15) = 1188 MHz - i tyle ustawiamy na stale.
+		 * Indeks 4 to l2_mux z enuma w drivers/clk/qcom/krait-cc.c.
+		 */
+		assigned-clocks = <&kraitcc 4>;
+		assigned-clock-rates = <1188000000>;
+	};
+
+	cpu_opp_table: opp-table-cpu {
+
+			compatible = "operating-points-v2-krait-cpu";
+			nvmem-cells = <&speedbin_efuse>;
+
+		opp-384000000 {
+			opp-hz = /bits/ 64 <384000000>;
+			opp-microvolt-speed2-pvs0-v0 = <950000>;
+			opp-microvolt-speed2-pvs1-v0 = <925000>;
+			opp-microvolt-speed2-pvs2-v0 = <900000>;
+			opp-microvolt-speed2-pvs3-v0 = <900000>;
+			opp-microvolt-speed2-pvs4-v0 = <875000>;
+			opp-microvolt-speed2-pvs5-v0 = <875000>;
+			opp-microvolt-speed2-pvs6-v0 = <875000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-486000000 {
+			opp-hz = /bits/ 64 <486000000>;
+			opp-microvolt-speed2-pvs0-v0 = <950000>;
+			opp-microvolt-speed2-pvs1-v0 = <925000>;
+			opp-microvolt-speed2-pvs2-v0 = <900000>;
+			opp-microvolt-speed2-pvs3-v0 = <900000>;
+			opp-microvolt-speed2-pvs4-v0 = <875000>;
+			opp-microvolt-speed2-pvs5-v0 = <875000>;
+			opp-microvolt-speed2-pvs6-v0 = <875000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-594000000 {
+			opp-hz = /bits/ 64 <594000000>;
+			opp-microvolt-speed2-pvs0-v0 = <950000>;
+			opp-microvolt-speed2-pvs1-v0 = <925000>;
+			opp-microvolt-speed2-pvs2-v0 = <900000>;
+			opp-microvolt-speed2-pvs3-v0 = <900000>;
+			opp-microvolt-speed2-pvs4-v0 = <875000>;
+			opp-microvolt-speed2-pvs5-v0 = <875000>;
+			opp-microvolt-speed2-pvs6-v0 = <875000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-702000000 {
+			opp-hz = /bits/ 64 <702000000>;
+			opp-microvolt-speed2-pvs0-v0 = <950000>;
+			opp-microvolt-speed2-pvs1-v0 = <925000>;
+			opp-microvolt-speed2-pvs2-v0 = <900000>;
+			opp-microvolt-speed2-pvs3-v0 = <900000>;
+			opp-microvolt-speed2-pvs4-v0 = <875000>;
+			opp-microvolt-speed2-pvs5-v0 = <875000>;
+			opp-microvolt-speed2-pvs6-v0 = <875000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-810000000 {
+			opp-hz = /bits/ 64 <810000000>;
+			opp-microvolt-speed2-pvs0-v0 = <962500>;
+			opp-microvolt-speed2-pvs1-v0 = <937500>;
+			opp-microvolt-speed2-pvs2-v0 = <912500>;
+			opp-microvolt-speed2-pvs3-v0 = <900000>;
+			opp-microvolt-speed2-pvs4-v0 = <887500>;
+			opp-microvolt-speed2-pvs5-v0 = <887500>;
+			opp-microvolt-speed2-pvs6-v0 = <887500>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-918000000 {
+			opp-hz = /bits/ 64 <918000000>;
+			opp-microvolt-speed2-pvs0-v0 = <975000>;
+			opp-microvolt-speed2-pvs1-v0 = <950000>;
+			opp-microvolt-speed2-pvs2-v0 = <925000>;
+			opp-microvolt-speed2-pvs3-v0 = <912500>;
+			opp-microvolt-speed2-pvs4-v0 = <900000>;
+			opp-microvolt-speed2-pvs5-v0 = <900000>;
+			opp-microvolt-speed2-pvs6-v0 = <900000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1026000000 {
+			opp-hz = /bits/ 64 <1026000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1000000>;
+			opp-microvolt-speed2-pvs1-v0 = <975000>;
+			opp-microvolt-speed2-pvs2-v0 = <950000>;
+			opp-microvolt-speed2-pvs3-v0 = <937500>;
+			opp-microvolt-speed2-pvs4-v0 = <925000>;
+			opp-microvolt-speed2-pvs5-v0 = <925000>;
+			opp-microvolt-speed2-pvs6-v0 = <925000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1134000000 {
+			opp-hz = /bits/ 64 <1134000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1025000>;
+			opp-microvolt-speed2-pvs1-v0 = <1000000>;
+			opp-microvolt-speed2-pvs2-v0 = <975000>;
+			opp-microvolt-speed2-pvs3-v0 = <962500>;
+			opp-microvolt-speed2-pvs4-v0 = <950000>;
+			opp-microvolt-speed2-pvs5-v0 = <937500>;
+			opp-microvolt-speed2-pvs6-v0 = <937500>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1242000000 {
+			opp-hz = /bits/ 64 <1242000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1037500>;
+			opp-microvolt-speed2-pvs1-v0 = <1012500>;
+			opp-microvolt-speed2-pvs2-v0 = <987500>;
+			opp-microvolt-speed2-pvs3-v0 = <975000>;
+			opp-microvolt-speed2-pvs4-v0 = <962500>;
+			opp-microvolt-speed2-pvs5-v0 = <950000>;
+			opp-microvolt-speed2-pvs6-v0 = <950000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1350000000 {
+			opp-hz = /bits/ 64 <1350000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1062500>;
+			opp-microvolt-speed2-pvs1-v0 = <1037500>;
+			opp-microvolt-speed2-pvs2-v0 = <1012500>;
+			opp-microvolt-speed2-pvs3-v0 = <1000000>;
+			opp-microvolt-speed2-pvs4-v0 = <975000>;
+			opp-microvolt-speed2-pvs5-v0 = <962500>;
+			opp-microvolt-speed2-pvs6-v0 = <962500>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1458000000 {
+			opp-hz = /bits/ 64 <1458000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1100000>;
+			opp-microvolt-speed2-pvs1-v0 = <1075000>;
+			opp-microvolt-speed2-pvs2-v0 = <1050000>;
+			opp-microvolt-speed2-pvs3-v0 = <1025000>;
+			opp-microvolt-speed2-pvs4-v0 = <1000000>;
+			opp-microvolt-speed2-pvs5-v0 = <987500>;
+			opp-microvolt-speed2-pvs6-v0 = <975000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1566000000 {
+			opp-hz = /bits/ 64 <1566000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1125000>;
+			opp-microvolt-speed2-pvs1-v0 = <1100000>;
+			opp-microvolt-speed2-pvs2-v0 = <1075000>;
+			opp-microvolt-speed2-pvs3-v0 = <1050000>;
+			opp-microvolt-speed2-pvs4-v0 = <1037500>;
+			opp-microvolt-speed2-pvs5-v0 = <1012500>;
+			opp-microvolt-speed2-pvs6-v0 = <1000000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1674000000 {
+			opp-hz = /bits/ 64 <1674000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1175000>;
+			opp-microvolt-speed2-pvs1-v0 = <1137500>;
+			opp-microvolt-speed2-pvs2-v0 = <1112500>;
+			opp-microvolt-speed2-pvs3-v0 = <1087500>;
+			opp-microvolt-speed2-pvs4-v0 = <1075000>;
+			opp-microvolt-speed2-pvs5-v0 = <1050000>;
+			opp-microvolt-speed2-pvs6-v0 = <1025000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1782000000 {
+			opp-hz = /bits/ 64 <1782000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1225000>;
+			opp-microvolt-speed2-pvs1-v0 = <1187500>;
+			opp-microvolt-speed2-pvs2-v0 = <1162500>;
+			opp-microvolt-speed2-pvs3-v0 = <1137500>;
+			opp-microvolt-speed2-pvs4-v0 = <1112500>;
+			opp-microvolt-speed2-pvs5-v0 = <1087500>;
+			opp-microvolt-speed2-pvs6-v0 = <1062500>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		opp-1890000000 {
+			opp-hz = /bits/ 64 <1890000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1287500>;
+			opp-microvolt-speed2-pvs1-v0 = <1250000>;
+			opp-microvolt-speed2-pvs2-v0 = <1212500>;
+			opp-microvolt-speed2-pvs3-v0 = <1175000>;
+			opp-microvolt-speed2-pvs4-v0 = <1150000>;
+			opp-microvolt-speed2-pvs5-v0 = <1125000>;
+			opp-microvolt-speed2-pvs6-v0 = <1100000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+		/*
+		 * One step above the factory maximum of 1890 MHz (HFPLL moves in
+		 * 2 x 27 MHz steps). Voltages follow the KT-SGS4 table (branch
+		 * aosp5.1), +25 mV per step. The pvs0 value exceeds the saw*_vreg
+		 * maximum of 1300 mV and is dropped by the kernel for that bin; this
+		 * board is speed bin 2, PVS 2. Higher points were tried and removed:
+		 * the sealed case throttles long before voltage becomes the limit.
+		 * L2 stays at 1188 MHz (kraitcc assigned-clocks), so VDD_MEM and
+		 * VDD_DIG are never touched.
+		 */
+		opp-1944000000 {
+			opp-hz = /bits/ 64 <1944000000>;
+			opp-microvolt-speed2-pvs0-v0 = <1312500>;
+			opp-microvolt-speed2-pvs1-v0 = <1275000>;
+			opp-microvolt-speed2-pvs2-v0 = <1237500>;
+			opp-microvolt-speed2-pvs3-v0 = <1200000>;
+			opp-microvolt-speed2-pvs4-v0 = <1175000>;
+			opp-microvolt-speed2-pvs5-v0 = <1150000>;
+			opp-microvolt-speed2-pvs6-v0 = <1125000>;
+			opp-supported-hw = <0x4>;   /* speed bin 2 */
+		};
+
+	};
+};
+
+/*
+ * qcom-apq8064.dtsi definiuje progi (75 st. C passive, 110 st. C critical),
+ * ale nie ma zadnych cooling-maps, wiec prog ostrzegawczy nie ma czym zadzialac
+ * i jedynym skutecznym progiem zostaje krytyczne wylaczenie.
+ *
+ * Kazda strefa ogranicza WSZYSTKIE cztery rdzenie, nie tylko swoj. Powod jest
+ * praktyczny: czujnik cpu0 (tsens 7) na tym egzemplarzu jest zamrozony - zwraca
+ * stale 69 st. C niezaleznie od obciazenia, wiec jego wlasny prog nigdy sie nie
+ * wyzwala. Przy mapowaniu 1:1 rdzen 0 zostawal na pelnym zegarze, podczas gdy
+ * sasiednie rdzenie dochodzily do 95 st. C. Rdzenie dziela ten sam kawalek
+ * krzemu, wiec chlodzenie ich razem jest i tak blizsze rzeczywistosci.
+ */
+&{/thermal-zones/cpu1-thermal} {
+	cooling-maps {
+		map0 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map1 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map2 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map3 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+	};
+};
+
+&{/thermal-zones/cpu2-thermal} {
+	cooling-maps {
+		map0 {
+			trip = <&cpu_alert2>;
+			cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map1 {
+			trip = <&cpu_alert2>;
+			cooling-device = <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map2 {
+			trip = <&cpu_alert2>;
+			cooling-device = <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map3 {
+			trip = <&cpu_alert2>;
+			cooling-device = <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+	};
+};
+
+&{/thermal-zones/cpu3-thermal} {
+	cooling-maps {
+		map0 {
+			trip = <&cpu_alert3>;
+			cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map1 {
+			trip = <&cpu_alert3>;
+			cooling-device = <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map2 {
+			trip = <&cpu_alert3>;
+			cooling-device = <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+		map3 {
+			trip = <&cpu_alert3>;
+			cooling-device = <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+		};
+	};
+};
+
+/*
+ * Czujnik cpu0 (tsens 7) jest wadliwy na tym egzemplarzu: po kilkudziesieciu
+ * sekundach pracy zawiesza sie na stalej wartosci (69-70 st. C) i przestaje
+ * reagowac na obciazenie, podczas gdy pozostale dziesiec czujnikow tsens
+ * odswieza sie normalnie. Martwa strefa jest gorsza niz jej brak - jej prog
+ * nigdy sie nie wyzwala, a htop pokazuje jej odczyt dla wszystkich rdzeni,
+ * bo powiela pierwszy czujnik hwmon.
+ *
+ * Rdzen 0 nie zostaje bez ochrony: strefy cpu1-cpu3 ograniczaja wszystkie
+ * cztery rdzenie naraz (patrz cooling-maps nizej).
+ */
+&{/thermal-zones/cpu0-thermal} {
+	status = "disabled";
+};

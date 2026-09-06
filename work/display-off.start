@@ -1,0 +1,8 @@
+#!/bin/sh
+# Headless: the panel never shows an image, but fbcon keeps the pipeline and the
+# backlight on for consoleblank seconds after boot and relights them on every
+# key press. Detach fbcon from the framebuffer, then power the display down.
+for v in /sys/class/vtconsole/vtcon*; do
+	grep -q 'frame buffer' "$v/name" 2>/dev/null && echo 0 > "$v/bind"
+done
+[ -e /sys/class/graphics/fb0/blank ] && echo 4 > /sys/class/graphics/fb0/blank

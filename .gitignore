@@ -1,0 +1,16 @@
+# kernel tree: clone it yourself, see README (patches/ has everything that differs)
+linux/
+# build artefacts and experiment leftovers
+work/apk-*/
+work/*.tar.gz
+work/*.ko
+work/mod-test/
+work/*.log
+work/dtb.*
+work/testb.dts
+work/working.dts
+*.apk
+*.orig
+*.rej
+# downstream reference copies and drafts, not needed to rebuild
+cpufreq/

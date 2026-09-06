@@ -1,0 +1,34 @@
+diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
+index 47c9b031f..52694ee90 100644
+--- a/drivers/cpufreq/Kconfig.arm
++++ b/drivers/cpufreq/Kconfig.arm
+@@ -150,6 +150,17 @@ config ARM_QCOM_CPUFREQ_NVMEM
+ 	help
+ 	  This adds the CPUFreq driver for Qualcomm Kryo SoC based boards.
+ 
++config KRAIT_UV
++	tristate "Runtime CPU operating point voltage adjustment"
++	depends on PM_OPP
++	help
++	  Exposes /sys/kernel/krait_uv to change the voltage of the CPU
++	  operating points on a running system, for undervolting experiments
++	  on Qualcomm Krait boards driven by cpufreq-dt. Unloading the module
++	  restores the device tree voltages.
++
++	  If in doubt, say N.
++
+ 	  If in doubt, say N.
+ 
+ config ARM_QCOM_CPUFREQ_HW
+diff --git a/drivers/cpufreq/Makefile b/drivers/cpufreq/Makefile
+index 385c9fcc6..22e124bae 100644
+--- a/drivers/cpufreq/Makefile
++++ b/drivers/cpufreq/Makefile
+@@ -73,6 +73,7 @@ obj-$(CONFIG_ARM_PXA2xx_CPUFREQ)	+= pxa2xx-cpufreq.o
+ obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
+ obj-$(CONFIG_ARM_QCOM_CPUFREQ_HW)	+= qcom-cpufreq-hw.o
+ obj-$(CONFIG_ARM_QCOM_CPUFREQ_NVMEM)	+= qcom-cpufreq-nvmem.o
++obj-$(CONFIG_KRAIT_UV)			+= krait-uv.o
+ obj-$(CONFIG_ARM_RASPBERRYPI_CPUFREQ) 	+= raspberrypi-cpufreq.o
+ obj-$(CONFIG_ARM_S3C64XX_CPUFREQ)	+= s3c64xx-cpufreq.o
+ obj-$(CONFIG_ARM_S5PV210_CPUFREQ)	+= s5pv210-cpufreq.o

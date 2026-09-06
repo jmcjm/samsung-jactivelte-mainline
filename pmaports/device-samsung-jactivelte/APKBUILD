@@ -1,0 +1,37 @@
+# Reference: <https://postmarketos.org/devicepkg>
+pkgname=device-samsung-jactivelte
+pkgver=0.1
+pkgrel=0
+pkgdesc="Samsung Galaxy S4 Active"
+url="https://postmarketos.org"
+arch="armv7"
+license="MIT"
+depends="
+	firmware-samsung-jflte
+	linux-firmware-brcm
+	linux-postmarketos-qcom-apq8064
+	mkbootimg
+	msm-firmware-loader
+	postmarketos-base
+"
+makedepends="devicepkg-dev"
+source="
+	deviceinfo
+	kernel-cmdline.conf
+	modules-initfs
+"
+options="!archcheck !check"
+
+build() {
+	devicepkg_build $startdir $pkgname
+}
+
+package() {
+	devicepkg_package $startdir $pkgname
+}
+
+sha512sums="
+7589ccc0dac03bd7258509bbd03cced92f7172c71502ce7f7d7c05bcc0586fd7736d24be5db74fca83666597d445b2ba95c437a3b967350a540952c2f68aa778  deviceinfo
+dce529d931031708299d534cb59e5d9862fb6d7bdb42f687242c6c88f5df96f184c39b99a27d734bea30471710dc63e80a356a6d9de78e4998e9da738158c252  kernel-cmdline.conf
+f627d473ccfc01f39ed7b1345c2795af0cd358b4738d202e53fbae07c605d239f9139b034c5a29411bafe368b92a44c756e2bd029246b385d6397f519af8ff7c  modules-initfs
+"

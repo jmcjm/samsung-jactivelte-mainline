@@ -1,0 +1,13 @@
+diff --git a/device/testing/linux-postmarketos-qcom-apq8064/config-postmarketos-qcom-apq8064.armv7 b/device/testing/linux-postmarketos-qcom-apq8064/config-postmarketos-qcom-apq8064.armv7
+index 741cb74644..a8c6e34458 100644
+--- a/device/testing/linux-postmarketos-qcom-apq8064/config-postmarketos-qcom-apq8064.armv7
++++ b/device/testing/linux-postmarketos-qcom-apq8064/config-postmarketos-qcom-apq8064.armv7
+@@ -3489,7 +3489,7 @@ CONFIG_BATTERY_MAX17040=y
+ # CONFIG_CHARGER_LT3651 is not set
+ # CONFIG_CHARGER_LTC4162L is not set
+ # CONFIG_CHARGER_DETECTOR_MAX14656 is not set
+-# CONFIG_CHARGER_MAX77693 is not set
++CONFIG_CHARGER_MAX77693=y
+ # CONFIG_CHARGER_MAX77976 is not set
+ # CONFIG_CHARGER_MAX8971 is not set
+ CONFIG_CHARGER_QCOM_SMBB=y

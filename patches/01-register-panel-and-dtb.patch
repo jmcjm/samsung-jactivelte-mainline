@@ -1,0 +1,44 @@
+diff --git a/arch/arm/boot/dts/qcom/Makefile b/arch/arm/boot/dts/qcom/Makefile
+index 6f89ba426..6fee0081d 100644
+--- a/arch/arm/boot/dts/qcom/Makefile
++++ b/arch/arm/boot/dts/qcom/Makefile
+@@ -13,6 +13,7 @@ dtb-$(CONFIG_ARCH_QCOM) += \
+ 	qcom-apq8064-sony-xperia-lagan-yuga.dtb \
+ 	qcom-apq8064-asus-nexus7-flo.dtb \
+ 	qcom-apq8064-lg-nexus4-mako.dtb \
++	qcom-apq8064-samsung-jactivelte.dtb \
+ 	qcom-apq8064-samsung-jflte.dtb \
+ 	qcom-apq8074-dragonboard.dtb \
+ 	qcom-ipq4018-ap120c-ac.dtb \
+diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
+index 285dc1a65..86fb564fd 100644
+--- a/drivers/gpu/drm/panel/Kconfig
++++ b/drivers/gpu/drm/panel/Kconfig
+@@ -806,6 +806,15 @@ config DRM_PANEL_SAMSUNG_MAGNA_OCTA
+ 	  Say Y here if you want minimal bring-up support for the
+ 	  Samsung Magna OCTA Full HD panel.
+ 
++config DRM_PANEL_SAMSUNG_RENESAS_TFT
++	tristate "Samsung jactivelte Renesas TFT FHD panel"
++	depends on GPIOLIB && OF && REGULATOR
++	depends on DRM_MIPI_DSI
++	default y
++	help
++	  Say Y here if you want support for the Renesas TFT Full HD panel
++	  found in the Samsung Galaxy S4 Active (GT-I9295, jactivelte).
++
+ config DRM_PANEL_SAMSUNG_S6E88A0_AMS427AP24
+ 	tristate "Samsung AMS427AP24 panel with S6E88A0 controller"
+ 	depends on GPIOLIB && OF && REGULATOR
+diff --git a/drivers/gpu/drm/panel/Makefile b/drivers/gpu/drm/panel/Makefile
+index d5616ab95..2e3e1aaf7 100644
+--- a/drivers/gpu/drm/panel/Makefile
++++ b/drivers/gpu/drm/panel/Makefile
+@@ -81,6 +81,7 @@ obj-$(CONFIG_DRM_PANEL_SAMSUNG_AMS581VF01) += panel-samsung-ams581vf01.o
+ obj-$(CONFIG_DRM_PANEL_SAMSUNG_AMS639RQ08) += panel-samsung-ams639rq08.o
+ obj-$(CONFIG_DRM_PANEL_SAMSUNG_ATNA33XC20) += panel-samsung-atna33xc20.o
+ obj-$(CONFIG_DRM_PANEL_SAMSUNG_DB7430) += panel-samsung-db7430.o
++obj-$(CONFIG_DRM_PANEL_SAMSUNG_RENESAS_TFT) += panel-samsung-renesas-tft.o
+ obj-$(CONFIG_DRM_PANEL_SAMSUNG_MAGNA_OCTA) += panel-samsung-magna-octa.o
+ panel-samsung-magna-octa-y := panel-samsung-magna-octa.o \
+ 			       panel-samsung-magna-octa-smart-dim.o

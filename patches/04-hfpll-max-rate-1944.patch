@@ -1,0 +1,44 @@
+diff --git a/drivers/clk/qcom/gcc-msm8960.c b/drivers/clk/qcom/gcc-msm8960.c
+index 0d3be44a6..fba5f507f 100644
+--- a/drivers/clk/qcom/gcc-msm8960.c
++++ b/drivers/clk/qcom/gcc-msm8960.c
+@@ -98,7 +98,8 @@ static struct hfpll_data hfpll0_data = {
+ 	.droop_reg = 0x3214,
+ 	.droop_val = 0x0108c000,
+ 	.min_rate = 600000000UL,
+-	.max_rate = 1800000000UL,
++	/* APQ8064AB Krait 300 runs its CPU PLLs up to 1944 MHz (L = 72). */
++	.max_rate = 1944000000UL,
+ };
+ 
+ static struct clk_hfpll hfpll0 = {
+@@ -126,7 +127,8 @@ static struct hfpll_data hfpll1_8064_data = {
+ 	.droop_reg = 0x3254,
+ 	.droop_val = 0x0108c000,
+ 	.min_rate = 600000000UL,
+-	.max_rate = 1800000000UL,
++	/* APQ8064AB Krait 300 runs its CPU PLLs up to 1944 MHz (L = 72). */
++	.max_rate = 1944000000UL,
+ };
+ 
+ static struct hfpll_data hfpll1_data = {
+@@ -168,7 +170,8 @@ static struct hfpll_data hfpll2_data = {
+ 	.droop_reg = 0x3294,
+ 	.droop_val = 0x0108c000,
+ 	.min_rate = 600000000UL,
+-	.max_rate = 1800000000UL,
++	/* APQ8064AB Krait 300 runs its CPU PLLs up to 1944 MHz (L = 72). */
++	.max_rate = 1944000000UL,
+ };
+ 
+ static struct clk_hfpll hfpll2 = {
+@@ -196,7 +199,8 @@ static struct hfpll_data hfpll3_data = {
+ 	.droop_reg = 0x32d4,
+ 	.droop_val = 0x0108c000,
+ 	.min_rate = 600000000UL,
+-	.max_rate = 1800000000UL,
++	/* APQ8064AB Krait 300 runs its CPU PLLs up to 1944 MHz (L = 72). */
++	.max_rate = 1944000000UL,
+ };
+ 
+ static struct clk_hfpll hfpll3 = {
