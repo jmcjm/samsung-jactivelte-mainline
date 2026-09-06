@@ -48,7 +48,7 @@ WORKLOG.md  the full work log
 | `05-dsi-phy-timing-override-debug.patch` | debug only: override the D-PHY timings from the kernel command line |
 | `06-krait-uv-build.patch` | Kconfig/Makefile entries for the `krait-uv` module |
 | `07-mdp4-primary-plane-possible-crtcs.patch` | restricts mdp4's primary planes to their own CRTC; Weston 16 aborts on the default 0xff mask |
-| `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend; the fork's `spin_until()` burned a core for a second on every suspend attempt when the halt is not acknowledged |
+| `08-a3xx-vbif-halt-bounded-wait.patch` | bounded, sleeping wait for the VBIF halt before GPU suspend, and no suspend at all when it is never acknowledged (suspending anyway hangs the GPU on resume); the fork's `spin_until()` burned a core for a second on every attempt |
 | `09-max77693-charger-is-not-a-battery.patch` | registers the MAX77693 charger as a USB supply; as a "battery" at 0 % it made upower average the real gauge down to half |
 | `panel-samsung-renesas-tft.c` | the panel driver |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
