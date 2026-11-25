@@ -181,6 +181,39 @@
 		};
 	};
 
+	/*
+	 * The vendor kernel bit-bangs this bus as well (NFC_SW_I2C in
+	 * board-jactive_eur.c); the same pins could also run as GSBI4 QUP.
+	 * Unlike its other i2c-gpio buses it sets no udelay there, so the
+	 * bus runs at the i2c-gpio default of 5 us, about 100 kHz.
+	 */
+	i2c-nfc {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm_pinmux 10 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm_pinmux 11 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <5>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		nfc@77 {
+			compatible = "brcm,bcm20794";
+			reg = <0x77>;
+
+			interrupts-extended = <&pm8921_gpio 29 IRQ_TYPE_LEVEL_HIGH>;
+			enable-gpios = <&pm8921_gpio 11 GPIO_ACTIVE_HIGH>;
+			/*
+			 * NFC_WAKE moved from PMIC GPIO 25 to GPIO 12 with board
+			 * revision 14 (nfc_gpio_rev_init() in the vendor kernel).
+			 * Units from before that revision need GPIO 25 here.
+			 */
+			wake-gpios = <&pm8921_gpio 12 GPIO_ACTIVE_LOW>;
+
+			pinctrl-names = "default";
+			pinctrl-0 = <&nfc_default_state>;
+		};
+	};
+
 	i2c-fg {
 		compatible = "i2c-gpio";
 		sda-gpios = <&tlmm_pinmux 0 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
@@ -744,6 +777,35 @@
 		 * while released and the initramfs drops into its debug shell.
 		 */
 		qcom,no-inversion;
+	};
+
+	/* Pin setup mirrors bcm2079x_init() in board-jactive_eur.c. */
+	nfc_default_state: nfc-default-state {
+		irq-pins {
+			pins = "gpio29";
+			function = PMIC_GPIO_FUNC_NORMAL;
+			input-enable;
+			bias-pull-down;
+			power-source = <PM8921_GPIO_S4>;
+			/* The vendor kernel clears inv_int_pol explicitly. */
+			qcom,no-inversion;
+		};
+
+		enable-pins {
+			pins = "gpio11";
+			function = PMIC_GPIO_FUNC_NORMAL;
+			drive-push-pull;
+			bias-pull-down;
+			power-source = <PM8921_GPIO_S4>;
+		};
+
+		wake-pins {
+			pins = "gpio12";
+			function = PMIC_GPIO_FUNC_NORMAL;
+			drive-push-pull;
+			bias-disable;
+			power-source = <PM8921_GPIO_S4>;
+		};
 	};
 };
 

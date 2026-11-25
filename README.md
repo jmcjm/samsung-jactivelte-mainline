@@ -26,6 +26,7 @@ not vendored, see below.
 | LED, sensors | LED works (owned by feedbackd under Phosh); all sensors sit behind Samsung's SSP sensor hub, no driver |
 | GPU (Adreno 320) | **works** with `firmware-qcom-adreno-a300` and Mesa freedreno (GL ES 2.0 forced, see below); glmark2's texture scene hangs it and the hang is not recoverable |
 | Phosh (phoc, greetd + phrog greeter) | **works**, see "GUI" below |
+| NFC (Broadcom BCM2079x, most likely BCM20794, I2C 0x77 on bit-banged TLMM 10/11) | NCI driver written (`bcm2079x.c`), **not tested on hardware yet**; no patch RAM firmware download, so it only works if the controller answers NCI on its ROM firmware |
 | Modem, audio, camera | not touched; SoC audio needs a WCD9310 codec driver that mainline lacks, Bluetooth A2DP works |
 
 ## Repository layout
@@ -52,7 +53,9 @@ WORKLOG.md  the full work log
 | `09-max77693-charger-is-not-a-battery.patch` | registers the MAX77693 charger as a USB supply; as a "battery" at 0 % it made upower average the real gauge down to half |
 | `10-dsi-force-hs-clock-param.patch` | `msm.dsi_force_hs_clk=1` keeps the DSI clock lane in HS while video runs on a non-continuous-clock panel, the way downstream did; off by default, for the image-retention experiment |
 | `11-a3xx-devfreq-busy-counter.patch` | a3xx reported core clock cycles as GPU busy time, so devfreq never left 450 MHz; read the PWR_1 busy counter instead |
+| `12-nfc-bcm2079x-build.patch` | Kconfig/Makefile entries for the BCM2079x NFC driver |
 | `panel-samsung-renesas-tft.c` | the panel driver |
+| `bcm2079x.c` | NCI driver for the Broadcom BCM2079x NFC controller over I2C (`drivers/nfc/`) |
 | `qcom-apq8064-samsung-jactivelte.dts` | the device tree |
 | `krait-uv.c` | runtime OPP voltage adjustment module |
 | `config-postmarketos-qcom-apq8064.armv7` | the complete kernel config used |
@@ -91,7 +94,9 @@ WORKLOG.md  the full work log
    git apply ../patches/09-max77693-charger-is-not-a-battery.patch
    git apply ../patches/10-dsi-force-hs-clock-param.patch
    git apply ../patches/11-a3xx-devfreq-busy-counter.patch
+   git apply ../patches/12-nfc-bcm2079x-build.patch
    cp ../patches/panel-samsung-renesas-tft.c drivers/gpu/drm/panel/
+   cp ../patches/bcm2079x.c drivers/nfc/
    cp ../patches/qcom-apq8064-samsung-jactivelte.dts arch/arm/boot/dts/qcom/
    cp ../patches/krait-uv.c drivers/cpufreq/
    printf '.git/\n' > .gitignore

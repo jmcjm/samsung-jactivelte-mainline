@@ -1,0 +1,36 @@
+diff --git a/drivers/nfc/Kconfig b/drivers/nfc/Kconfig
+index 288c6f1c6..47eae8e50 100644
+--- a/drivers/nfc/Kconfig
++++ b/drivers/nfc/Kconfig
+@@ -60,6 +60,19 @@ config NFC_VIRTUAL_NCI
+ 
+ 	  If unsure, say N.
+ 
++config NFC_BCM2079X
++	tristate "Broadcom BCM2079x NFC controller (I2C)"
++	depends on NFC_NCI && I2C
++	help
++	  This enables the NCI driver for the Broadcom BCM2079x family of
++	  NFC controllers (BCM20793, BCM20794 and relatives) connected over
++	  I2C, as found in the Samsung Galaxy S4 family.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called bcm2079x.
++
++	  If unsure, say N.
++
+ source "drivers/nfc/fdp/Kconfig"
+ source "drivers/nfc/pn544/Kconfig"
+ source "drivers/nfc/pn533/Kconfig"
+diff --git a/drivers/nfc/Makefile b/drivers/nfc/Makefile
+index 7b1bfde1d..8c3fc63f7 100644
+--- a/drivers/nfc/Makefile
++++ b/drivers/nfc/Makefile
+@@ -3,6 +3,7 @@
+ # Makefile for nfc devices
+ #
+ 
++obj-$(CONFIG_NFC_BCM2079X)	+= bcm2079x.o
+ obj-$(CONFIG_NFC_FDP)		+= fdp/
+ obj-$(CONFIG_NFC_PN544)		+= pn544/
+ obj-$(CONFIG_NFC_MICROREAD)	+= microread/
